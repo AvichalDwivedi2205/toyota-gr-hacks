@@ -19,12 +19,15 @@ import os
 sys.path.append(os.path.dirname(__file__))
 
 # Try to import enhanced RaceSim from nice.py
+USE_ENHANCED = False
 try:
     from nice import RaceSim as EnhancedRaceSim, CarState as EnhancedCarState
     USE_ENHANCED = True
-except ImportError:
+    print("✓ Enhanced RaceSim imported successfully - Enhanced Physics will be used!")
+except ImportError as e:
     USE_ENHANCED = False
-    print("Warning: Could not import enhanced RaceSim from nice.py, using basic version")
+    print(f"⚠ Warning: Could not import enhanced RaceSim from nice.py: {e}")
+    print("   Using basic physics version")
 
 # -------------------- Track & Simulation Core --------------------
 
@@ -233,7 +236,7 @@ class RaceSim:
         self.dt = 0.5
         self.time = 0.0
         self.weather = weather or {'rain': 0.15, 'track_temp': 25.0, 'wind': 0.0}
-        self.total_laps = 72
+        self.total_laps = 36
         self.race_finished = False
         self.init_cars(n_cars)
 
@@ -512,10 +515,24 @@ def initialize_simulation():
     weather = {'rain': 0.15, 'track_temp': 22.0, 'wind': 3.0}
     
     if USE_ENHANCED:
+        print("🚀 Initializing simulation with Enhanced Physics Engine...")
         sim = EnhancedRaceSim(track_data, n_cars=20, weather=weather)
+        # Verify physics engine is loaded
+        if hasattr(sim, 'physics_engine') and sim.physics_engine:
+            print("✓ Simulation initialized with Enhanced Physics Engine active")
+            # Print detailed status if available
+            if hasattr(sim, 'get_physics_status'):
+                status = sim.get_physics_status()
+                if status['enhanced_physics_active']:
+                    print("✅ ENHANCED PHYSICS IS ACTIVE AND BEING USED!")
+                else:
+                    print("⚠ Warning: Enhanced RaceSim loaded but Physics Engine not active")
+        else:
+            print("⚠ Warning: Enhanced RaceSim loaded but Physics Engine not available")
     else:
+        print("⚠ Using basic physics simulation (no enhanced physics)")
         sim = RaceSim(track_data, n_cars=20, weather=weather)
-    sim.total_laps = 72
+    sim.total_laps = 36
 
 @app.on_event("startup")
 async def startup_event():

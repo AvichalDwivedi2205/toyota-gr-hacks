@@ -201,33 +201,59 @@ class RaceSim:
         self.weather = weather or {'rain': 0.0, 'track_temp': 25.0, 'wind': 0.0}
         
         # Import enhanced modules
+        self.physics_engine = None
+        self.lidar_simulator = None
+        self.advanced_driving = None
+        self.controller_adapters = {}
+        self.track_boundaries = None
+        
+        # Try to import PhysicsEngine first (most critical)
         try:
             from enhanced_physics import PhysicsEngine
-            from lidar_simulator import LidarSimulator
-            from controller_adapter import ControllerAdapter
-            from advanced_driving import AdvancedDriving
-            
             self.physics_engine = PhysicsEngine()
-            self.lidar_simulator = LidarSimulator(num_rays=360, max_range=10.0, track_width=12.0)
-            self.advanced_driving = AdvancedDriving()
-            
-            # Create controller adapters for each car (will be initialized in init_cars)
-            self.controller_adapters = {}
-            
-            # Pre-compute track boundaries for LiDAR
-            self.track_boundaries = None
-            
+            print("✓ Enhanced Physics Engine loaded successfully")
         except ImportError as e:
-            print(f"Warning: Could not import enhanced modules: {e}")
-            print("Falling back to basic physics")
-            self.physics_engine = None
-            self.lidar_simulator = None
-            self.advanced_driving = None
-            self.controller_adapters = {}
-            self.track_boundaries = None
+            print(f"⚠ Warning: Could not import PhysicsEngine: {e}")
+            print("   Falling back to basic physics")
+        
+        # Try to import other enhanced modules (optional)
+        try:
+            from lidar_simulator import LidarSimulator
+            self.lidar_simulator = LidarSimulator(num_rays=360, max_range=10.0, track_width=12.0)
+            print("✓ LiDAR Simulator loaded successfully")
+        except ImportError as e:
+            print(f"⚠ Warning: Could not import LidarSimulator: {e}")
+        
+        try:
+            from controller_adapter import ControllerAdapter
+            print("✓ Controller Adapter available")
+        except ImportError as e:
+            print(f"⚠ Warning: Could not import ControllerAdapter: {e}")
+        
+        try:
+            from advanced_driving import AdvancedDriving
+            self.advanced_driving = AdvancedDriving()
+            print("✓ Advanced Driving behaviors loaded")
+        except ImportError as e:
+            print(f"⚠ Warning: Could not import AdvancedDriving: {e}")
+        
+        # Pre-compute track boundaries for LiDAR if available
+        if self.lidar_simulator:
+            self.track_boundaries = None  # Will be computed in init_cars
         
         self.init_cars(n_cars)
-        self.total_laps = 20
+        self.total_laps = 36
+        
+        # Print physics status summary
+        status = self.get_physics_status()
+        print("\n" + "="*60)
+        print("PHYSICS ENGINE STATUS:")
+        print("="*60)
+        print(f"  Enhanced Physics Engine: {'✓ ACTIVE' if status['enhanced_physics_active'] else '✗ NOT AVAILABLE'}")
+        print(f"  LiDAR Simulator: {'✓ ACTIVE' if status['lidar_available'] else '✗ NOT AVAILABLE'}")
+        print(f"  Advanced Driving: {'✓ ACTIVE' if status['advanced_driving_available'] else '✗ NOT AVAILABLE'}")
+        print(f"  Controllers: {'✓ ACTIVE' if status['controllers_available'] else '✗ NOT AVAILABLE'}")
+        print("="*60 + "\n")
 
     def init_cars(self, n):
         colors = plt.cm.tab10.colors
@@ -424,18 +450,24 @@ class RaceSim:
                     tire_grip = self.tyre_grip_coeff(car)
                     car.tire_grip = tire_grip
                     
-                    # Apply physics step
+                    # Apply physics step with enhanced physics engine
                     new_speed = self.physics_engine.apply_physics_step(
                         car, throttle, brake, steering, self.dt, curv
                     )
                     car.v = new_speed
+                    # Mark that enhanced physics was used (for debugging)
+                    car._using_enhanced_physics = True
                 except Exception as e:
                     # Fallback to basic physics
-                    print(f"Physics error for {car.name}: {e}")
+                    print(f"⚠ Physics error for {car.name}: {e}")
+                    import traceback
+                    traceback.print_exc()
                     car.v = self._basic_physics(car, throttle, brake, curv)
+                    car._using_enhanced_physics = False
             else:
                 # Basic physics fallback
                 car.v = self._basic_physics(car, throttle, brake, curv)
+                car._using_enhanced_physics = False
             
             # Store control inputs
             car.throttle = throttle
@@ -519,6 +551,15 @@ class RaceSim:
         car.v = max(0.0, min(car.v, v_straight))
         return car.v
 
+    def get_physics_status(self):
+        """Return status of physics engine"""
+        return {
+            'enhanced_physics_active': self.physics_engine is not None,
+            'lidar_available': self.lidar_simulator is not None,
+            'advanced_driving_available': self.advanced_driving is not None,
+            'controllers_available': len(self.controller_adapters) > 0
+        }
+    
     def get_leaderboard(self):
         # Rank by laps completed then total distance covered then total_time
         sorted_cars = sorted(self.cars, key=lambda c: (-c.laps_completed, -(c.s % self.track['total_length']), c.total_time))
