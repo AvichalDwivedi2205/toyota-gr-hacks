@@ -7,6 +7,8 @@ import RaceStats from './components/RaceStats';
 import RaceLog from './components/RaceLog';
 import PitLog from './components/PitLog';
 import CarDetails from './components/CarDetails';
+import RaceInsightsModal from './components/RaceInsightsModal';
+import RaceDashboard from './components/RaceDashboard';
 import ConnectionStatus from './components/ConnectionStatus';
 import FilterBar from './components/FilterBar';
 import WeatherSelector from './components/WeatherSelector';
@@ -27,6 +29,9 @@ function App() {
 
   const [selectedCar, setSelectedCar] = useState(null);
   const [showCarDetails, setShowCarDetails] = useState(false);
+  const [showRaceInsights, setShowRaceInsights] = useState(false);
+  const [showRaceDashboard, setShowRaceDashboard] = useState(false);
+  const [raceInsights, setRaceInsights] = useState({});
   const [selectedWeather, setSelectedWeather] = useState({
     rain: 0.0,
     track_temp: 25.0,
@@ -82,6 +87,25 @@ function App() {
     }
   }, [raceState.weather, raceState.race_finished]);
 
+  // Fetch race insights when race finishes and show dashboard
+  useEffect(() => {
+    if (raceState.race_finished && !showRaceDashboard) {
+      const fetchInsights = async () => {
+        try {
+          const response = await fetch('http://localhost:8000/api/race-insights');
+          if (response.ok) {
+            const data = await response.json();
+            setRaceInsights(data.insights || {});
+            setShowRaceDashboard(true);
+          }
+        } catch (error) {
+          console.error('Failed to fetch race insights:', error);
+        }
+      };
+      fetchInsights();
+    }
+  }, [raceState.race_finished, showRaceDashboard]);
+
   // Debug logging
   React.useEffect(() => {
     console.log('App State:', { isConnected, error, hasTrackData: !!trackData, hasCars: raceState.cars?.length });
@@ -100,6 +124,8 @@ function App() {
     if (raceState.race_finished) {
       resetRace();
       setRaceStarted(false);
+      setShowRaceDashboard(false);
+      setRaceInsights({});
       weatherInitialized.current = false; // Reset initialization flag for new race
       // Wait a bit for reset to complete
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -136,6 +162,33 @@ function App() {
   };
 
   const selectedCarData = raceState.cars?.find(c => c.name === selectedCar);
+
+  const handleResetFromDashboard = () => {
+    resetRace();
+    setRaceStarted(false);
+    setShowRaceDashboard(false);
+    setRaceInsights({});
+    weatherInitialized.current = false;
+  };
+
+  const handleBackFromDashboard = () => {
+    setShowRaceDashboard(false);
+  };
+
+  // Show Race Dashboard when race is finished
+  if (showRaceDashboard && raceState.race_finished) {
+    return (
+      <div className="app" ref={appRef}>
+        <RaceDashboard
+          insights={raceInsights}
+          undercutSummary={raceState.undercut_summary || []}
+          raceState={raceState}
+          onReset={handleResetFromDashboard}
+          onBack={handleBackFromDashboard}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="app" ref={appRef}>
@@ -185,7 +238,7 @@ function App() {
         </div>
       )}
 
-      {raceState.race_finished && (
+      {raceState.race_finished && !showRaceDashboard && (
         <div className="race-controls-section">
           <div className="start-button-container">
             <StartRaceButton
@@ -269,6 +322,19 @@ function App() {
         isOpen={showCarDetails}
         onClose={() => setShowCarDetails(false)}
         containerRef={rightColumnRef}
+      />
+
+      <RaceInsightsModal
+        isOpen={showRaceInsights}
+        onClose={() => setShowRaceInsights(false)}
+        onReset={() => {
+          resetRace();
+          setRaceStarted(false);
+          setShowRaceInsights(false);
+          setRaceInsights({});
+          weatherInitialized.current = false;
+        }}
+        insights={raceInsights}
       />
 
       <footer className="app-footer">

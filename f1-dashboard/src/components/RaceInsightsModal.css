@@ -1,0 +1,338 @@
+.race-insights-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 9998;
+  backdrop-filter: blur(4px);
+}
+
+.race-insights-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 900px;
+  max-height: 85vh;
+  background: #0a0a0a;
+  border: 2px solid #E10600;
+  border-radius: 8px;
+  box-shadow: 0 0 30px rgba(225, 6, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.race-insights-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 2px solid rgba(225, 6, 0, 0.4);
+  background: rgba(225, 6, 0, 0.1);
+}
+
+.race-insights-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.race-insights-title h2 {
+  margin: 0;
+  color: #E10600;
+  font-size: 24px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.close-button:hover {
+  background: rgba(225, 6, 0, 0.3);
+  color: #E10600;
+}
+
+.race-insights-content {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 20px;
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.driver-menu {
+  border-right: 1px solid rgba(225, 6, 0, 0.3);
+  padding-right: 20px;
+}
+
+.driver-menu h3 {
+  color: #E10600;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.driver-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.driver-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(225, 6, 0, 0.3);
+  border-left: 3px solid transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+}
+
+.driver-item:hover {
+  background: rgba(225, 6, 0, 0.1);
+  border-left-color: #E10600;
+}
+
+.driver-item.active {
+  background: rgba(225, 6, 0, 0.2);
+  border-left-color: #E10600;
+  border-color: #E10600;
+}
+
+.driver-position {
+  font-weight: 900;
+  color: #E10600;
+  min-width: 30px;
+}
+
+.driver-name {
+  flex: 1;
+  font-size: 14px;
+}
+
+.insights-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.driver-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(225, 6, 0, 0.3);
+}
+
+.driver-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.position-badge {
+  background: #E10600;
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.insights-section,
+.recommendations-section {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(225, 6, 0, 0.3);
+  border-left: 3px solid #E10600;
+  padding: 16px;
+  border-radius: 4px;
+}
+
+.insights-section h4,
+.recommendations-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #E10600;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insight-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+}
+
+.insight-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.insight-icon.success {
+  color: #00ff00;
+}
+
+.insight-icon.warning {
+  color: #ffaa00;
+}
+
+.insight-content {
+  flex: 1;
+}
+
+.insight-message {
+  color: #fff;
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.insight-action {
+  color: #a0a0a0;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.no-insights,
+.no-recommendations,
+.no-driver-selected {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
+
+.recommendations-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recommendation-item {
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border-left: 3px solid #ffaa00;
+  color: #fff;
+  font-size: 13px;
+  border-radius: 4px;
+}
+
+.stats-summary {
+  display: flex;
+  gap: 20px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(225, 6, 0, 0.3);
+  border-radius: 4px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  color: #a0a0a0;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  color: #E10600;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.race-insights-footer {
+  padding: 16px 20px;
+  border-top: 2px solid rgba(225, 6, 0, 0.4);
+  background: rgba(225, 6, 0, 0.05);
+  display: flex;
+  justify-content: center;
+}
+
+.reset-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #E10600;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+
+.reset-button:hover {
+  background: #ff1a1a;
+  box-shadow: 0 0 15px rgba(225, 6, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+.reset-button:active {
+  transform: translateY(0);
+}
+
+/* Scrollbar styling */
+.race-insights-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.race-insights-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.race-insights-content::-webkit-scrollbar-thumb {
+  background: rgba(225, 6, 0, 0.5);
+  border-radius: 4px;
+}
+
+.race-insights-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(225, 6, 0, 0.7);
+}
+

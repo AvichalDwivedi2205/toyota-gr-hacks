@@ -221,7 +221,8 @@
   justify-content: center;
 }
 
-.gear-badge {
+.gear-badge,
+.pitstop-badge {
   width: 32px;
   height: 32px;
   display: flex;
@@ -233,6 +234,7 @@
   color: #E10600;
   border: 2px solid rgba(225, 6, 0, 0.5);
   box-shadow: 0 0 10px rgba(225, 6, 0, 0.3);
+  border-radius: 4px;
 }
 
 .col-tyre {

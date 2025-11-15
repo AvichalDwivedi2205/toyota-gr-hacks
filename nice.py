@@ -187,6 +187,11 @@ class CarState:
         
         # Track temperature (for tire temp calculation)
         self.track_temp = 25.0
+        
+        # Driver error state tracking
+        self.error_active = False
+        self.error_timer = 0.0
+        self.error_speed_multiplier = 1.0
 
     def lap_progress_fraction(self, track):
         return (self.s % track['total_length']) / track['total_length']
@@ -320,6 +325,10 @@ class RaceSim:
         v = math.sqrt(grip * k / curv)
         # heavier fuel reduces top speed linearly
         v *= (1 - 0.001 * car.fuel)
+        # Wind speed penalty: higher wind makes cornering more difficult
+        wind_speed = self.weather.get('wind', 0.0)
+        wind_penalty_factor = 0.015  # ~1.5% reduction per m/s of wind
+        v *= (1 - wind_penalty_factor * wind_speed)
         return v
 
     def straight_speed(self, car):
@@ -336,10 +345,16 @@ class RaceSim:
         return base
 
     def error_probability(self, car):
-        # chance per second to make an error
+        """
+        Calculate error probability based on driver skill and conditions.
+        Higher skill = lower error probability.
+        """
         rain = self.weather['rain']
         wear = car.wear
-        base = 0.0005 + 0.001 * (1 - car.driver_skill)
+        # Base probability inversely proportional to driver skill
+        # Higher skill drivers have lower base probability
+        skill_factor = (1 - car.driver_skill)
+        base = 0.0003 + 0.0015 * skill_factor  # Low base probability, scales with skill
         prob = base * (1 + 4 * rain + 6 * wear + car.aggression)
         return min(prob, 0.5)
 
@@ -483,19 +498,26 @@ class RaceSim:
             car.throttle = throttle
             car.brake_pressure = brake
             
-            # Random incident
-            if random.random() < self.error_probability(car) * self.dt:
-                r = random.random()
-                if r < 0.6:
-                    car.v *= 0.6
-                    car.total_time += 2.0
-                elif r < 0.9:
-                    car.v = 0.0
-                    car.total_time += 6.0
-                else:
-                    car.on_pit = True
-                    car.pit_counter = PIT_TIME
-                    car.total_time += PIT_TIME
+            # Apply error speed reduction if driver is in error state
+            if car.error_active:
+                car.v *= car.error_speed_multiplier
+                car.error_timer -= self.dt
+                if car.error_timer <= 0:
+                    # Error state expired, reset
+                    car.error_active = False
+                    car.error_timer = 0.0
+                    car.error_speed_multiplier = 1.0
+            
+            # Driver error handling: temporary speed reduction for 2-3 seconds
+            if not car.error_active and random.random() < self.error_probability(car) * self.dt:
+                # Trigger error: slow down by 10% for 2-3 seconds
+                car.error_active = True
+                car.error_timer = random.uniform(2.0, 3.0)  # Random duration between 2-3 seconds
+                car.error_speed_multiplier = 0.9  # 10% speed reduction
+                
+                # Log error message
+                error_type = random.choice(["goes wide", "goes into gravel"])
+                print(f"{car.name} {error_type}!")
             
             # Compound-specific tyre wear
             wear_rate = TYRE_WEAR_RATES.get(car.tyre, 1.0)

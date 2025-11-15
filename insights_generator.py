@@ -1,0 +1,285 @@
+"""
+ML Insights Generator using Gemini 2.5 Flash API
+Generates F1 strategy insights in ML-style format with confidence scores and recommendations.
+"""
+
+import os
+import json
+import signal
+from typing import Dict, List, Optional
+from dotenv import load_dotenv
+import google.generativeai as genai
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Timeout for API calls (in seconds)
+API_TIMEOUT = 120  # 2 minutes
+
+class InsightsGenerator:
+    """
+    Generates ML-style F1 race insights using Gemini 2.5 Flash API.
+    Analyzes race data from simulation expert and F1 expert perspectives.
+    """
+    
+    def __init__(self, api_key: Optional[str] = None):
+        """
+        Initialize Gemini API client.
+        
+        Args:
+            api_key: Gemini API key. If None, reads from GEMINI_API_KEY environment variable
+                     or .env file in the project root.
+        """
+        api_key = api_key or os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            raise ValueError(
+                "Gemini API key not provided. Set GEMINI_API_KEY environment variable "
+                "or create a .env file with GEMINI_API_KEY=your_key_here"
+            )
+        
+        genai.configure(api_key=api_key)
+        # Use Gemini 2.5 Flash - fast and efficient for large-scale processing
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        
+    def generate_insights(self, race_data: Dict) -> Dict:
+        """
+        Generate ML-style insights for all drivers based on race data.
+        
+        Args:
+            race_data: Complete race data from RaceDataCollector.export_race_data()
+            
+        Returns:
+            Dictionary with insights for each driver in ML-style format
+        """
+        prompt = self._build_prompt(race_data)
+        
+        # Timeout handler
+        def timeout_handler(signum, frame):
+            raise TimeoutError(f"Gemini API call timed out after {API_TIMEOUT} seconds")
+        
+        try:
+            # Set up timeout
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(API_TIMEOUT)
+            
+            try:
+                print(f"[InsightsGenerator] Generating insights for {len(race_data.get('drivers', []))} drivers...")
+                response = self.model.generate_content(prompt)
+                signal.alarm(0)  # Cancel timeout
+                
+                if not response or not hasattr(response, 'text'):
+                    raise ValueError("Empty or invalid response from Gemini API")
+                
+                insights_text = response.text
+                print(f"[InsightsGenerator] Received response ({len(insights_text)} characters)")
+                
+                # Parse JSON from response (Gemini may include markdown formatting)
+                insights_text = insights_text.strip()
+                if insights_text.startswith('```json'):
+                    insights_text = insights_text[7:]
+                if insights_text.startswith('```'):
+                    insights_text = insights_text[3:]
+                if insights_text.endswith('```'):
+                    insights_text = insights_text[:-3]
+                insights_text = insights_text.strip()
+                
+                insights = json.loads(insights_text)
+                print(f"[InsightsGenerator] Successfully parsed insights for {len(insights.get('drivers', {}))} drivers")
+                return insights
+                
+            except TimeoutError:
+                signal.alarm(0)
+                error_msg = f"API call timed out after {API_TIMEOUT} seconds. The prompt may be too large or the API is slow."
+                print(f"[InsightsGenerator] ERROR: {error_msg}")
+                return {
+                    'error': error_msg,
+                    'error_type': 'timeout',
+                    'drivers': {}
+                }
+            except json.JSONDecodeError as e:
+                signal.alarm(0)
+                error_msg = f"Failed to parse JSON response: {str(e)}"
+                print(f"[InsightsGenerator] ERROR: {error_msg}")
+                print(f"[InsightsGenerator] Response preview: {insights_text[:500] if 'insights_text' in locals() else 'N/A'}")
+                return {
+                    'error': error_msg,
+                    'error_type': 'json_parse_error',
+                    'response_preview': insights_text[:500] if 'insights_text' in locals() else None,
+                    'drivers': {}
+                }
+            except Exception as e:
+                signal.alarm(0)
+                error_msg = f"Error generating insights: {str(e)}"
+                print(f"[InsightsGenerator] ERROR: {error_msg}")
+                print(f"[InsightsGenerator] Error type: {type(e).__name__}")
+                return {
+                    'error': error_msg,
+                    'error_type': type(e).__name__,
+                    'drivers': {}
+                }
+                
+        except Exception as e:
+            signal.alarm(0)  # Ensure timeout is cancelled
+            error_msg = f"Unexpected error: {str(e)}"
+            print(f"[InsightsGenerator] FATAL ERROR: {error_msg}")
+            return {
+                'error': error_msg,
+                'error_type': 'unexpected_error',
+                'drivers': {}
+            }
+    
+    def _build_prompt(self, race_data: Dict) -> str:
+        """
+        Build comprehensive F1 expert prompt for Gemini API.
+        
+        Args:
+            race_data: Complete race data dictionary
+            
+        Returns:
+            Formatted prompt string
+        """
+        race_summary = race_data.get('race_summary', {})
+        drivers = race_data.get('drivers', [])
+        
+        prompt = f"""You are an expert F1 race strategist and simulation analyst with deep knowledge of Formula 1 racing strategy, tire management, pit stop optimization, and race simulation data analysis.
+
+Analyze the following race simulation data and generate ML-style insights for each driver. Your output should look like it's generated by a sophisticated machine learning algorithm analyzing race performance.
+
+RACE SUMMARY:
+- Total Laps: {race_summary.get('total_laps', 0)}
+- Race Duration: {race_summary.get('race_duration', 0)} seconds
+- Weather: Rain={race_summary.get('weather', {}).get('rain', 0):.2f}, Track Temp={race_summary.get('weather', {}).get('track_temp', 25):.1f}°C
+- Track Length: {race_summary.get('track_length', 0):.1f} meters
+- Winner: {race_summary.get('winner', 'Unknown')}
+- Fastest Lap Overall: {race_summary.get('fastest_lap_overall', 'N/A')} seconds
+
+DRIVER DATA:
+"""
+        
+        # Add driver summaries
+        for driver in drivers:
+            prompt += f"""
+{driver['name']} (P{driver['final_position']}):
+- Total Time: {driver['total_time']}s
+- Laps Completed: {driver['laps_completed']}
+- Pit Stops: {driver['pitstop_count']}
+- Pit Strategy: {json.dumps(driver['pitstop_strategy'], indent=2)}
+- Tire Usage: {json.dumps(driver['tire_usage'], indent=2)}
+- Fastest Lap: {driver['fastest_lap'].get('lap_time', 'N/A') if driver['fastest_lap'] else 'N/A'}s (Lap {driver['fastest_lap'].get('lap', 'N/A') if driver['fastest_lap'] else 'N/A'})
+- Sector Performance: Best S1={driver['sector_performance'].get('best_sector1', 'N/A')}, S2={driver['sector_performance'].get('best_sector2', 'N/A')}, S3={driver['sector_performance'].get('best_sector3', 'N/A')}
+- Position Changes: {len([e for e in driver['race_events'] if e.get('type') == 'overtake'])} overtakes
+- Race Events: {len(driver['race_events'])} total events
+
+"""
+        
+        prompt += """
+ANALYSIS REQUIREMENTS:
+
+For EACH driver, generate insights in the following JSON structure:
+
+{
+  "driver_name": {
+    "pit_strategy_analysis": {
+      "optimal_strategy": "1-stop" | "2-stop" | "3-stop",
+      "optimal_strategy_confidence": 0.0-1.0,
+      "actual_strategy": "description",
+      "strategy_efficiency_score": 0.0-1.0,
+      "recommended_pit_laps": [lap numbers],
+      "recommended_tire_sequence": ["SOFT", "MEDIUM", "HARD"],
+      "undercut_opportunities": [
+        {
+          "lap": number,
+          "opportunity_score": 0.0-1.0,
+          "description": "explanation",
+          "potential_time_gain": seconds
+        }
+      ],
+      "missed_opportunities": [
+        {
+          "lap": number,
+          "opportunity_type": "undercut" | "overcut" | "tire_management",
+          "description": "what should have been done",
+          "potential_benefit": "time gain or position improvement"
+        }
+      ]
+    },
+    "tire_management": {
+      "tire_usage_score": 0.0-1.0,
+      "optimal_compound_analysis": {
+        "recommended_starting_compound": "SOFT" | "MEDIUM" | "HARD",
+        "confidence": 0.0-1.0,
+        "reasoning": "explanation"
+      },
+      "tire_wear_analysis": {
+        "wear_rate_score": 0.0-1.0,
+        "optimal_wear_threshold": 0.0-1.0,
+        "pit_timing_score": 0.0-1.0
+      },
+      "compound_transitions": [
+        {
+          "from": "SOFT",
+          "to": "MEDIUM",
+          "lap": number,
+          "efficiency_score": 0.0-1.0,
+          "analysis": "was this optimal?"
+        }
+      ]
+    },
+    "sector_performance": {
+      "sector1_score": 0.0-1.0,
+      "sector2_score": 0.0-1.0,
+      "sector3_score": 0.0-1.0,
+      "weakest_sector": "S1" | "S2" | "S3",
+      "improvement_potential": {
+        "sector": "S1" | "S2" | "S3",
+        "potential_time_gain": seconds,
+        "recommendations": ["specific improvement suggestions"]
+      }
+    },
+    "race_craft": {
+      "overtaking_efficiency": 0.0-1.0,
+      "defensive_driving_score": 0.0-1.0,
+      "drs_usage_score": 0.0-1.0,
+      "position_gain_opportunities": [
+        {
+          "lap": number,
+          "opportunity_type": "overtake" | "undercut" | "strategy",
+          "description": "what could have been done",
+          "potential_position_gain": number
+        }
+      ]
+    },
+    "overall_assessment": {
+      "performance_score": 0.0-1.0,
+      "strategy_score": 0.0-1.0,
+      "execution_score": 0.0-1.0,
+      "key_strengths": ["strength1", "strength2"],
+      "key_weaknesses": ["weakness1", "weakness2"],
+      "top_3_recommendations": [
+        {
+          "priority": 1,
+          "category": "pit_strategy" | "tire_management" | "sector_performance" | "race_craft",
+          "recommendation": "specific actionable recommendation",
+          "expected_benefit": "time gain or position improvement",
+          "confidence": 0.0-1.0
+        }
+      ]
+    }
+  }
+}
+
+IMPORTANT:
+1. All scores should be between 0.0 and 1.0 (higher is better)
+2. Confidence scores indicate how certain the analysis is (0.0 = uncertain, 1.0 = very certain)
+3. Think like an F1 strategist: consider tire degradation, track position, traffic, weather, and race dynamics
+4. Compare each driver's actual performance against optimal strategy
+5. Identify specific lap numbers where different decisions would have helped
+6. Consider undercut/overcut opportunities based on tire wear and track position
+7. Analyze sector performance to identify driving weaknesses
+8. Provide actionable recommendations with expected benefits
+
+Generate insights for ALL drivers. Output ONLY valid JSON, no additional text.
+"""
+        
+        return prompt
+

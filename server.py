@@ -155,10 +155,11 @@ def build_spline(waypoints, n_points=2000):
     }
 
 class CarState:
-    def __init__(self, name, color, driver_skill=0.9, aggression=0.5):
+    def __init__(self, name, color, driver_skill=0.9, car_skill=0.85, aggression=0.5):
         self.name = name
         self.color = color
         self.driver_skill = driver_skill
+        self.car_skill = car_skill
         self.aggression = aggression
         self.tyre = 'MEDIUM'
         self.wear = 0.0
@@ -209,6 +210,11 @@ class CarState:
         # Track position and time gaps before pitstop for undercut calculation
         self.position_before_pitstop = None
         self.time_gaps_before_pitstop = {}  # Dict: {car_name: time_gap}
+        
+        # Driver error state tracking
+        self.error_active = False
+        self.error_timer = 0.0
+        self.error_speed_multiplier = 1.0
 
     def to_dict(self, track):
         u = track['s_to_u'](self.s)
@@ -285,29 +291,45 @@ class RaceSim:
         self.init_cars(n_cars)
 
     def init_cars(self, n):
-        driver_names = [
-            'Oscar Piastri', 'Lando Norris', 'George Russell', 'Kimi Antonelli',
-            'Max Verstappen', 'Yuki Tsunoda', 'Charles Leclerc', 'Lewis Hamilton',
-            'Alexander Albon', 'Carlos Sainz', 'Liam Lawson', 'Isack Hadjar',
-            'Lance Stroll', 'Fernando Alonso', 'Esteban Ocon', 'Oliver Bearman',
-            'Nico Hulkenberg', 'Gabriel Bortoleto', 'Pierre Gasly', 'Franco Colapinto'
+        # Driver data: (name, driver_skill, car_skill, color)
+        driver_data = [
+            ('Max Verstappen', 0.99, 0.86, '#3671C6'),      # Red Bull
+            ('Lando Norris', 0.95, 0.90, '#FF8700'),        # McLaren
+            ('Oscar Piastri', 0.92, 0.90, '#FF8700'),       # McLaren
+            ('Fernando Alonso', 0.92, 0.78, '#00D4AB'),     # Aston Martin
+            ('Charles Leclerc', 0.91, 0.87, '#DC0000'),     # Ferrari
+            ('George Russell', 0.94, 0.87, '#00665E'),      # Mercedes
+            ('Carlos Sainz', 0.89, 0.82, '#DC0000'),        # Ferrari
+            ('Lewis Hamilton', 0.88, 0.87, '#006F62'),      # Mercedes
+            ('Alexander Albon', 0.85, 0.82, '#0090FF'),     # Williams
+            ('Oliver Bearman', 0.84, 0.84, '#E10600'),      # Haas
+            ('Isack Hadjar', 0.83, 0.82, '#66ccff'),        # RB
+            ('Nico Hulkenberg', 0.82, 0.77, '#66ff66'),     # Sauber
+            ('Kimi Antonelli', 0.81, 0.87, '#00665E'),      # Mercedes
+            ('Gabriel Bortoleto', 0.80, 0.77, '#66ff66'),   # Sauber
+            ('Esteban Ocon', 0.79, 0.82, '#00D4AB'),        # Aston Martin
+            ('Pierre Gasly', 0.78, 0.80, '#ff66cf'),        # Alpine
+            ('Yuki Tsunoda', 0.77, 0.84, '#3671C6'),        # Red Bull
+            ('Liam Lawson', 0.76, 0.85, '#66ccff'),         # RB
+            ('Franco Colapinto', 0.75, 0.80, '#ff66cf'),    # Alpine
+            ('Lance Stroll', 0.74, 0.78, '#00D4AB')         # Aston Martin
         ]
-        colors = [
-            '#00D2BE', '#0600EF', '#DC0000', '#FF8700', '#DC0000',
-            '#0600EF', '#00D2BE', '#006F62', '#FF8700', '#006F62',
-            '#1E41FF', '#FF1800', '#00D4AB', '#E10600', '#00665E',
-            '#FFB800', '#000000', '#FFFFFF', '#0090FF', '#FF6B00'
-        ]
+        
+        # Sort drivers by driver_skill descending (highest to lowest)
+        driver_data.sort(key=lambda x: x[1], reverse=True)
         
         # Initialize tire temperature based on ambient temperature
         ambient_temp = self.weather.get('track_temp', 25.0)
-        initial_tire_temp = ambient_temp + 10.0  # Start slightly above ambient
+        initial_tire_temp = max(80.0, ambient_temp + 55.0)  # Start at realistic F1 tire temp (80-90°C)
         
         for i in range(n):
-            name = driver_names[i % len(driver_names)]
-            color = colors[i % len(colors)]
+            # Get driver data (cycling through if more cars than drivers)
+            driver_info = driver_data[i % len(driver_data)]
+            name, driver_skill, car_skill, color = driver_info
+            
             c = CarState(name, color,
-                        driver_skill=0.75 + random.random()*0.25,
+                        driver_skill=driver_skill,
+                        car_skill=car_skill,
                         aggression=0.3 + random.random()*0.7)
             # F1 grid start: all cars start at same position with 2m spacing
             c.s = i * 2.0  # 2 meters between consecutive cars
@@ -326,7 +348,10 @@ class RaceSim:
             grip *= (1.0 + 0.3 * rain) if rain > 0.3 else (1.0 - 0.5 * rain)
         else:
             grip *= (1.0 - 0.9 * rain)
-        grip *= (0.8 + 0.4 * car.driver_skill)
+        # Combine driver skill and car skill for grip handling
+        # Driver skill affects how well they handle the car, car skill affects mechanical grip
+        combined_skill = 0.7 * car.driver_skill + 0.3 * car.car_skill
+        grip *= (0.8 + 0.4 * combined_skill)
         return max(grip, 0.05)
 
     def cornering_speed(self, car, curvature):
@@ -335,10 +360,18 @@ class RaceSim:
         curv = max(curvature, 1e-6)
         v = math.sqrt(grip * k / curv)
         v *= (1 - 0.001 * car.fuel)
+        # Wind speed penalty: higher wind makes cornering more difficult
+        wind_speed = self.weather.get('wind', 0.0)
+        wind_penalty_factor = 0.015  # ~1.5% reduction per m/s of wind
+        v *= (1 - wind_penalty_factor * wind_speed)
         return v
 
     def straight_speed(self, car):
-        base = 80.0 + 20.0 * car.driver_skill
+        # Combine driver skill and car skill for overall performance
+        # Driver skill affects how well they can extract performance from the car
+        # Car skill represents the car's inherent speed potential
+        combined_skill = 0.6 * car.driver_skill + 0.4 * car.car_skill
+        base = 80.0 + 20.0 * combined_skill
         base *= (1 - 0.25 * self.weather['rain'])
         # Apply compound speed multiplier directly (SOFT fastest, HARD slowest)
         tyre_speed_multiplier = TYRE_BASE.get(car.tyre, 0.95)
@@ -352,10 +385,26 @@ class RaceSim:
         return base
 
     def error_probability(self, car):
+        """
+        Calculate error probability based on driver skill and conditions.
+        Higher skill = lower error probability.
+        """
         rain = self.weather['rain']
         wear = car.wear
-        base = 0.0005 + 0.001 * (1 - car.driver_skill)
-        prob = base * (1 + 4 * rain + 6 * wear + car.aggression)
+        # Base probability inversely proportional to driver skill
+        # Higher skill drivers (0.98) have lower base probability
+        # Lower skill drivers (0.68) have higher base probability
+        skill_factor = (1 - car.driver_skill)  # 0.02 for Max, 0.32 for Stroll
+        base = 0.0001 + 0.0008 * skill_factor  # Reduced base probability (~50% reduction), scales with skill
+        
+        # Reduce rain factor for wet/inters tyres (they provide better grip in rain)
+        # Dry tyres (SOFT/MEDIUM/HARD) keep full rain impact
+        if car.tyre in ['WET', 'INTERMEDIATE']:
+            rain_factor = 0.3 * rain  # Reduced rain impact for wet tyres
+        else:
+            rain_factor = 4 * rain  # Full rain impact for dry tyres
+        
+        prob = base * (1 + rain_factor + 6 * wear + car.aggression)
         return min(prob, 0.5)
 
     def pitstop_probability(self, car):
@@ -507,7 +556,7 @@ class RaceSim:
                     car.wear = 0.0  # Reset wear for new tyres
                     # Reset tire temperature to slightly above ambient (new tyres start warm)
                     ambient_temp = self.weather.get('track_temp', 25.0)
-                    car.tire_temp = ambient_temp + 10.0  # New tyres start 10°C above ambient
+                    car.tire_temp = max(80.0, ambient_temp + 55.0)  # New tyres start at realistic F1 temp
                     car.position_before_pitstop = None  # Reset (already reset in calculate_undercuts)
                 continue
             
@@ -519,25 +568,43 @@ class RaceSim:
             # Find car position in leaderboard
             car_position = next((i for i, c in enumerate(sorted_cars) if c == car), -1)
             
-            # DRS rules: Active after 3 laps by leader, within 1s of car ahead, on straights
+            # DRS rules: Active after 3 laps by leader, within 1s of car ahead AND leader, on designated straight only
             leader = sorted_cars[0] if sorted_cars else None
             if leader and leader.laps_completed >= 3 and car_position > 0:
-                car_ahead = sorted_cars[car_position - 1]
-                # Calculate time gap to car ahead (positive if car is behind)
-                # Use distance-based calculation for accuracy
                 track_length = self.track['total_length']
-                lap_diff = car.laps_completed - car_ahead.laps_completed
-                distance_gap = (lap_diff * track_length) + (car_ahead.s - car.s)
-                # Convert distance gap to time gap using current speed
-                if car.v > 0.1:
-                    time_gap = distance_gap / car.v
-                else:
-                    time_gap = 999.0  # Very large gap if car is stopped
-                # Check if on straight (low curvature)
-                is_straight = curv < 0.001
-                # DRS active if within 1 second and on straight
-                if 0 < time_gap <= 1.0 and is_straight:
-                    car.drs_active = True
+                
+                # Define DRS zone: specific straight section (e.g., bottom straight from T8 to T9)
+                # Using track position normalized to 0-1, DRS zone is roughly 0.35-0.45 of track length
+                # This corresponds to the long bottom straight section
+                drs_zone_start = 0.35 * track_length
+                drs_zone_end = 0.45 * track_length
+                
+                # Check if car is in DRS zone (accounting for lap wrapping)
+                car_s_normalized = car.s % track_length
+                in_drs_zone = drs_zone_start <= car_s_normalized <= drs_zone_end
+                
+                if in_drs_zone:
+                    car_ahead = sorted_cars[car_position - 1]
+                    # Calculate time gap to car ahead (positive if car is behind)
+                    lap_diff = car.laps_completed - car_ahead.laps_completed
+                    distance_gap = (lap_diff * track_length) + (car_ahead.s - car.s)
+                    # Convert distance gap to time gap using current speed
+                    if car.v > 0.1:
+                        time_gap_ahead = distance_gap / car.v
+                    else:
+                        time_gap_ahead = 999.0  # Very large gap if car is stopped
+                    
+                    # Calculate time gap to leader
+                    leader_lap_diff = car.laps_completed - leader.laps_completed
+                    leader_distance_gap = (leader_lap_diff * track_length) + (leader.s - car.s)
+                    if car.v > 0.1:
+                        time_gap_leader = leader_distance_gap / car.v
+                    else:
+                        time_gap_leader = 999.0
+                    
+                    # DRS active if within 1 second of car ahead AND within 1 second of leader
+                    if 0 < time_gap_ahead <= 1.0 and 0 < time_gap_leader <= 1.0:
+                        car.drs_active = True
             
             # Lookahead to anticipate upcoming corners
             lookahead_distance = car.v * 2.0  # Look 2 seconds ahead
@@ -565,6 +632,16 @@ class RaceSim:
             
             # Cap speed to target_v (respects cornering limits)
             car.v = max(0.0, min(car.v, target_v))
+            
+            # Apply error speed reduction if driver is in error state
+            if car.error_active:
+                car.v *= car.error_speed_multiplier
+                car.error_timer -= self.dt
+                if car.error_timer <= 0:
+                    # Error state expired, reset
+                    car.error_active = False
+                    car.error_timer = 0.0
+                    car.error_speed_multiplier = 1.0
 
             # Check for pitstop based on probability
             if not car.on_pit and random.random() < self.pitstop_probability(car) * self.dt:
@@ -590,14 +667,16 @@ class RaceSim:
                     'undercuts': {}  # Will be populated when pitstop completes
                 })
 
-            if random.random() < self.error_probability(car) * self.dt:
-                r = random.random()
-                if r < 0.6:
-                    car.v *= 0.6
-                    car.total_time += 2.0
-                elif r < 0.9:
-                    car.v = 0.0
-                    car.total_time += 6.0
+            # Driver error handling: temporary speed reduction for 2-3 seconds
+            if not car.error_active and random.random() < self.error_probability(car) * self.dt:
+                # Trigger error: slow down by 10% for 2-3 seconds
+                car.error_active = True
+                car.error_timer = random.uniform(2.0, 3.0)  # Random duration between 2-3 seconds
+                car.error_speed_multiplier = 0.9  # 10% speed reduction
+                
+                # Log error message
+                error_type = random.choice(["goes wide", "goes into gravel"])
+                print(f"{car.name} {error_type}!")
 
             # Tyre wear calculation with compound-specific rates
             base_wear_rate = 0.0005 * (1 + 0.8 * (1 - self.tyre_grip_coeff(car)))
@@ -611,14 +690,45 @@ class RaceSim:
             # Update tire temperature based on speed, cornering, and compound
             ambient_temp = self.weather.get('track_temp', 25.0)
             heat_factor = TYRE_HEAT_FACTORS.get(car.tyre, 1.0)
-            # Heat generation from speed and cornering
-            slip_angle = abs(curv) * car.v if car.v > 0 else 0
-            heat_gen = 0.01 * car.v * slip_angle * heat_factor
-            # Cooling based on temperature difference from ambient
-            cooling = 0.05 * (car.tire_temp - ambient_temp)
+            
+            # Determine if car is cornering (high curvature) or on straight (low curvature)
+            is_cornering = curv > 0.002  # Threshold for cornering vs straight
+            is_straight = curv < 0.0005  # Threshold for straight sections
+            
+            # Heat generation: much higher during cornering due to lateral forces
+            if is_cornering:
+                # Cornering generates significant heat from lateral forces
+                # Heat scales with speed squared and curvature
+                cornering_heat = 2.5 * (car.v ** 2) * curv * heat_factor
+                # Additional heat from speed
+                speed_heat = 0.3 * car.v * heat_factor
+                heat_gen = cornering_heat + speed_heat
+            elif is_straight:
+                # Straights generate minimal heat (mostly from rolling resistance)
+                heat_gen = 0.15 * car.v * heat_factor
+            else:
+                # Transition zones (medium curvature)
+                heat_gen = 0.8 * car.v * abs(curv) * 100 * heat_factor
+            
+            # Cooling: less aggressive, allows temperature to build up
+            # Cooling rate increases with speed (more airflow on straights)
+            cooling_rate = 0.02 if is_cornering else 0.08  # Less cooling in corners, more on straights
+            
+            # Rain increases cooling rate - tyres cool faster in wet conditions
+            rain = self.weather.get('rain', 0.0)
+            rain_cooling_factor = 1.0 + (rain * 0.5)  # Up to 50% more cooling in heavy rain
+            cooling_rate *= rain_cooling_factor
+            
+            cooling = cooling_rate * (car.tire_temp - ambient_temp) * (1 + car.v * 0.01)
+            
+            # Additional rain cooling effect - water on track cools tyres more
+            if rain > 0:
+                rain_cooling = rain * 0.15 * (car.tire_temp - ambient_temp) * self.dt
+                cooling += rain_cooling
+            
             # Temperature change
             dtemp = (heat_gen - cooling) * self.dt
-            car.tire_temp = max(ambient_temp, min(car.tire_temp + dtemp, 150.0))
+            car.tire_temp = max(ambient_temp + 20, min(car.tire_temp + dtemp, 150.0))
             
             car.fuel -= 0.02 * self.dt
             if car.fuel < 0:
@@ -725,6 +835,105 @@ class RaceSim:
                         })
         return summary
     
+    def get_race_insights(self):
+        """
+        Generate actionable race insights for each driver.
+        Returns driver-wise insights including undercuts, pit strategies, and recommendations.
+        Insights are ordered by final position (P1, P2, etc.).
+        """
+        insights = {}
+        sorted_cars = self.get_leaderboard()
+        
+        # Process cars in position order (P1, P2, etc.) to maintain order in dict
+        for car in sorted_cars:
+            driver_insights = {
+                'name': car.name,
+                'final_position': car.position,
+                'total_time': car.total_time,
+                'pitstops': len(car.pitstop_history),
+                'insights': [],
+                'recommendations': []
+            }
+            
+            # Analyze pitstop strategy
+            if car.pitstop_history:
+                pitstop_count = len(car.pitstop_history)
+                # Check for undercut opportunities
+                best_undercut = None
+                worst_undercut = None
+                best_gain = -999
+                worst_loss = 999
+                
+                for pitstop in car.pitstop_history:
+                    if 'undercuts' in pitstop:
+                        for other_name, data in pitstop['undercuts'].items():
+                            gain = data.get('time_gain', 0)
+                            if gain > best_gain:
+                                best_gain = gain
+                                best_undercut = {
+                                    'lap': pitstop.get('lap', 0),
+                                    'vs': other_name,
+                                    'gain': round(gain, 2),
+                                    'position_change': data.get('position_change', 0)
+                                }
+                            if gain < worst_loss:
+                                worst_loss = gain
+                                worst_undercut = {
+                                    'lap': pitstop.get('lap', 0),
+                                    'vs': other_name,
+                                    'loss': round(abs(gain), 2),
+                                    'position_change': data.get('position_change', 0)
+                                }
+                
+                if best_undercut and best_gain > 1.0:
+                    driver_insights['insights'].append({
+                        'type': 'undercut_success',
+                        'message': f"Best undercut: Gained {best_undercut['gain']}s vs {best_undercut['vs']} on lap {best_undercut['lap']}",
+                        'action': f"Pitstop timing on lap {best_undercut['lap']} was excellent - consider similar timing in future races"
+                    })
+                
+                if worst_undercut and worst_loss < -1.0:
+                    driver_insights['insights'].append({
+                        'type': 'undercut_failure',
+                        'message': f"Lost {worst_undercut['loss']}s vs {worst_undercut['vs']} on lap {worst_undercut['lap']}",
+                        'action': f"Pitstop timing on lap {worst_undercut['lap']} was suboptimal - consider pitting earlier or later next time"
+                    })
+                
+                # Analyze pitstop frequency
+                if pitstop_count == 0:
+                    driver_insights['recommendations'].append("Consider a pitstop strategy - no stops may have cost time")
+                elif pitstop_count > 2:
+                    driver_insights['recommendations'].append(f"Multiple pitstops ({pitstop_count}) - consider optimizing strategy to reduce stops")
+                
+                # Analyze tyre choices
+                tyre_choices = [p.get('new_tyre', 'UNKNOWN') for p in car.pitstop_history if 'new_tyre' in p]
+                if tyre_choices:
+                    rain = self.weather.get('rain', 0)
+                    if rain > 0.3 and 'WET' not in tyre_choices and 'INTERMEDIATE' not in tyre_choices:
+                        driver_insights['recommendations'].append("Consider using wet/inters tyres in rainy conditions")
+            
+            # Analyze final position vs starting position
+            if car.position:
+                # Assuming starting position is based on car index (simplified)
+                starting_pos = self.cars.index(car) + 1
+                position_change = starting_pos - car.position
+                if position_change > 0:
+                    driver_insights['insights'].append({
+                        'type': 'position_gain',
+                        'message': f"Gained {position_change} positions (P{starting_pos} → P{car.position})",
+                        'action': "Strong race performance - maintain consistency"
+                    })
+                elif position_change < 0:
+                    driver_insights['insights'].append({
+                        'type': 'position_loss',
+                        'message': f"Lost {abs(position_change)} positions (P{starting_pos} → P{car.position})",
+                        'action': "Review race strategy and pitstop timing for improvement"
+                    })
+            
+            insights[car.name] = driver_insights
+        
+        return insights
+    
     def get_state(self):
         """Get complete race state for WebSocket broadcast"""
         sorted_cars = self.get_leaderboard()
@@ -782,7 +991,11 @@ class RaceSim:
             car.time_gaps_before_pitstop = {}
             car.tyre = random.choice(['SOFT', 'MEDIUM', 'HARD'])
             ambient_temp = self.weather.get('track_temp', 25.0)
-            car.tire_temp = ambient_temp + 10.0
+            car.tire_temp = max(80.0, ambient_temp + 55.0)  # Reset to realistic F1 tire temp
+            # Reset error state
+            car.error_active = False
+            car.error_timer = 0.0
+            car.error_speed_multiplier = 1.0
             # F1 grid start: all cars start at same position with 2m spacing
             car_index = self.cars.index(car)
             car.s = car_index * 2.0  # 2 meters between consecutive cars
@@ -846,11 +1059,8 @@ async def simulation_loop():
     global sim
     while True:
         if sim and len(active_connections) > 0:
-            # Check if race is finished and reset if needed
-            if sim.race_finished:
-                # Wait a moment to show final results, then reset
-                await asyncio.sleep(2.0)  # 2 second pause before new race
-                sim.reset_race()
+            # Don't auto-reset after race finish - keep showing final results
+            # Race reset will be handled manually via reset button in frontend
             
             # Run multiple simulation steps per broadcast
             for _ in range(3):
@@ -949,6 +1159,26 @@ async def get_race_status():
         "time": sim.time,
         "weather": sim.weather,
         "total_laps": sim.total_laps
+    }
+
+@app.get("/api/race-insights")
+async def get_race_insights():
+    """Get actionable race insights for all drivers"""
+    global sim
+    if sim is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail="Simulation not initialized")
+    
+    if not sim.race_finished:
+        return {
+            "message": "Race not finished yet",
+            "insights": {}
+        }
+    
+    insights = sim.get_race_insights()
+    return {
+        "insights": insights,
+        "race_finished": True
     }
 
 @app.websocket("/ws")

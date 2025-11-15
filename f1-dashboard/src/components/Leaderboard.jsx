@@ -187,7 +187,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
           <span className="col-gap">Gap</span>
           <span className="col-speed">Speed</span>
           <span className="col-rpm">Wear</span>
-          <span className="col-gear">G</span>
+          <span className="col-gear">Pits</span>
           <span className="col-tyre">Tyre</span>
           <span className="col-temp">Temp</span>
           <span className="col-drs">DRS</span>
@@ -266,8 +266,8 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
                 </span>
                 
                 <span className="col-gear">
-                  <div className={`gear-badge gear-${car.gear || 1}`}>
-                    {car.gear || 1}
+                  <div className="pitstop-badge">
+                    {car.pitstop_count || 0}
                   </div>
                 </span>
                 

@@ -1,0 +1,475 @@
+.race-dashboard {
+  min-height: 100vh;
+  background: #000000;
+  padding: 20px;
+  color: #fff;
+}
+
+.race-dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  background: linear-gradient(180deg, rgba(139, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%);
+  border: 2px solid #E10600;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 0 30px rgba(225, 6, 0, 0.3);
+}
+
+.dashboard-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dashboard-trophy-icon {
+  color: #E10600;
+  filter: drop-shadow(0 0 10px rgba(225, 6, 0, 0.8));
+}
+
+.dashboard-title-section h1 {
+  margin: 0;
+  color: #E10600;
+  font-size: 32px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.dashboard-subtitle {
+  margin: 4px 0 0 0;
+  color: #B8B8B8;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.back-button,
+.reset-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+
+.back-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(225, 6, 0, 0.5);
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #E10600;
+  box-shadow: 0 0 15px rgba(225, 6, 0, 0.3);
+}
+
+.reset-button {
+  background: #E10600;
+  color: #fff;
+}
+
+.reset-button:hover {
+  background: #ff1a1a;
+  box-shadow: 0 0 15px rgba(225, 6, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+.reset-button:active {
+  transform: translateY(0);
+}
+
+.race-dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.dashboard-section {
+  background: rgba(10, 10, 10, 0.8);
+  border: 2px solid rgba(225, 6, 0, 0.4);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 0 20px rgba(225, 6, 0, 0.2);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid rgba(225, 6, 0, 0.4);
+}
+
+.section-header svg {
+  color: #E10600;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: #E10600;
+  font-size: 24px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Undercut Section */
+.undercut-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.undercut-card {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(225, 6, 0, 0.3);
+  border-left: 3px solid #E10600;
+  border-radius: 6px;
+  padding: 16px;
+  transition: all 0.3s;
+}
+
+.undercut-card:hover {
+  border-color: #E10600;
+  box-shadow: 0 0 15px rgba(225, 6, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.undercut-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(225, 6, 0, 0.2);
+}
+
+.undercut-driver-name {
+  display: block;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.undercut-lap {
+  color: #B8B8B8;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.undercut-tyre-change {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tyre-badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.tyre-badge.old {
+  background: rgba(255, 255, 255, 0.1);
+  color: #B8B8B8;
+}
+
+.tyre-badge.new {
+  background: rgba(225, 6, 0, 0.3);
+  color: #E10600;
+}
+
+.tyre-arrow {
+  color: #E10600;
+  font-weight: 900;
+}
+
+.undercut-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pit-time-info {
+  color: #B8B8B8;
+  font-size: 12px;
+}
+
+.pit-time-info strong {
+  color: #E10600;
+  font-size: 14px;
+}
+
+.undercut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.undercut-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.undercut-time {
+  font-weight: 700;
+  min-width: 60px;
+}
+
+.undercut-time.gain {
+  color: #00ff00;
+}
+
+.undercut-time.loss {
+  color: #ff4444;
+}
+
+.undercut-vs {
+  color: #B8B8B8;
+}
+
+.undercut-position {
+  color: #E10600;
+  font-size: 11px;
+  margin-left: auto;
+}
+
+/* Insights Section */
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+}
+
+.driver-insight-card {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(225, 6, 0, 0.3);
+  border-left: 3px solid #E10600;
+  border-radius: 6px;
+  padding: 20px;
+  transition: all 0.3s;
+}
+
+.driver-insight-card:hover {
+  border-color: #E10600;
+  box-shadow: 0 0 15px rgba(225, 6, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.driver-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(225, 6, 0, 0.2);
+}
+
+.driver-card-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.driver-position-badge {
+  background: #E10600;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: 900;
+  font-size: 14px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.driver-card-title h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.driver-stats-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.mini-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.mini-stat-label {
+  color: #B8B8B8;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mini-stat-value {
+  color: #E10600;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.driver-insights-list,
+.driver-recommendations-list {
+  margin-top: 16px;
+}
+
+.insights-subheader,
+.recommendations-subheader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #E10600;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+
+.driver-insights-list .insight-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.insight-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.insight-icon.success {
+  color: #00ff00;
+}
+
+.insight-icon.warning {
+  color: #ffaa00;
+}
+
+.insight-content {
+  flex: 1;
+}
+
+.insight-message {
+  color: #fff;
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.insight-action {
+  color: #a0a0a0;
+  font-size: 11px;
+  font-style: italic;
+}
+
+.recommendations-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recommendation-item {
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border-left: 3px solid #ffaa00;
+  color: #fff;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.no-insights-message {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+  font-size: 13px;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .undercut-grid,
+  .insights-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .race-dashboard-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .dashboard-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .back-button,
+  .reset-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .undercut-grid,
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Scrollbar styling */
+.race-dashboard-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.race-dashboard-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.race-dashboard-content::-webkit-scrollbar-thumb {
+  background: rgba(225, 6, 0, 0.5);
+  border-radius: 4px;
+}
+
+.race-dashboard-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(225, 6, 0, 0.7);
+}
+

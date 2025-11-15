@@ -1,0 +1,312 @@
+.race-end-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.race-end-modal {
+  background: linear-gradient(135deg, #0a0a0a 0%, #000000 100%);
+  border-radius: 20px;
+  padding: 40px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(225, 6, 0, 0.3);
+  border: 2px solid rgba(225, 6, 0, 0.4);
+  position: relative;
+}
+
+.race-end-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid rgba(225, 6, 0, 0.4);
+}
+
+.race-end-flag-icon {
+  width: 40px;
+  height: 40px;
+  color: #ffd700;
+  animation: wave 2s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+
+.race-end-header h2 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.race-end-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.race-winner-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 30px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%);
+  border-radius: 15px;
+  border: 2px solid rgba(255, 215, 0, 0.3);
+}
+
+.trophy-icon {
+  width: 60px;
+  height: 60px;
+  color: #ffd700;
+  flex-shrink: 0;
+}
+
+.winner-info {
+  flex: 1;
+}
+
+.winner-name {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffd700;
+  margin-bottom: 5px;
+}
+
+.winner-position {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 5px;
+}
+
+.winner-time {
+  font-size: 24px;
+  color: #fff;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.race-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  width: 24px;
+  height: 24px;
+  color: #E10600;
+  margin: 0 auto 10px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 5px;
+  font-family: 'Courier New', monospace;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.podium-section {
+  margin-top: 20px;
+}
+
+.podium-section h3 {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.podium-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 15px;
+  height: 200px;
+}
+
+.podium-item {
+  flex: 1;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border-radius: 12px 12px 0 0;
+  padding: 20px;
+  text-align: center;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.podium-item:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.podium-1 {
+  height: 100%;
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.1) 100%);
+  border-color: rgba(255, 215, 0, 0.4);
+}
+
+.podium-2 {
+  height: 75%;
+  background: linear-gradient(180deg, rgba(192, 192, 192, 0.2) 0%, rgba(192, 192, 192, 0.1) 100%);
+  border-color: rgba(192, 192, 192, 0.4);
+}
+
+.podium-3 {
+  height: 60%;
+  background: linear-gradient(180deg, rgba(205, 127, 50, 0.2) 0%, rgba(205, 127, 50, 0.1) 100%);
+  border-color: rgba(205, 127, 50, 0.4);
+}
+
+.podium-position {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.podium-name {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.podium-time {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Courier New', monospace;
+}
+
+.insights-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.generate-insights-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #E10600 0%, #8B0000 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 18px 30px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba(225, 6, 0, 0.3);
+}
+
+.generate-insights-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(225, 6, 0, 0.5);
+  background: linear-gradient(135deg, #FF1A0A 0%, #E10600 100%);
+}
+
+.generate-insights-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinning-loader {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 18px 30px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.error-message {
+  background: rgba(255, 0, 0, 0.1);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 15px;
+  color: #ff6b6b;
+  text-align: center;
+}
+
+/* Scrollbar styling */
+.race-end-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.race-end-modal::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.race-end-modal::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #E10600 0%, #8B0000 100%);
+  border-radius: 4px;
+}
+
+.race-end-modal::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #FF1A0A 0%, #E10600 100%);
+}
+

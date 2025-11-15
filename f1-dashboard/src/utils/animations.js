@@ -212,7 +212,7 @@ export const telemetryFlow = (element, options = {}) => {
   flow.style.left = direction === 'right' ? '-100%' : '100%';
   flow.style.width = '30%';
   flow.style.height = '100%';
-  flow.style.background = `linear-gradient(${direction === 'right' ? '90deg' : '270deg'}, transparent, ${color}40, transparent)`;
+  flow.style.background = `linear-gradient(${direction === 'right' ? '90deg' : '270deg'}, transparent, ${color}20, transparent)`;
   flow.style.pointerEvents = 'none';
   element.style.position = 'relative';
   element.style.overflow = 'hidden';
