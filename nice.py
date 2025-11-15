@@ -269,8 +269,8 @@ class RaceSim:
             c = CarState(name, colors[i % len(colors)],
                          driver_skill=0.75 + random.random()*0.25,
                          aggression=0.3 + random.random()*0.7)
-            # spread start positions slightly
-            c.s = i * (self.track['total_length'] / n) * 0.6
+            # F1 grid start: all cars start at same position with 2m spacing
+            c.s = i * 2.0  # 2 meters between consecutive cars
             c.v = 0.0
             c.tyre = random.choice(['SOFT', 'MEDIUM', 'HARD'])
             c.tire_compound = c.tyre

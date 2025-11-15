@@ -75,7 +75,8 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
         checkeredFlag(checkeredFlagRef.current, {
           duration: 1000,
           size: 20,
-          colors: ['#FFFFFF', '#000000']
+          colors: ['#FFFFFF', '#000000'],
+          lapNumber: maxLap
         });
       }
       prevLapRef.current = maxLap;

@@ -267,7 +267,8 @@ class RaceSim:
             c = CarState(name, color,
                         driver_skill=0.75 + random.random()*0.25,
                         aggression=0.3 + random.random()*0.7)
-            c.s = i * (self.track['total_length'] / n) * 0.6
+            # F1 grid start: all cars start at same position with 2m spacing
+            c.s = i * 2.0  # 2 meters between consecutive cars
             c.v = 0.0
             c.tyre = random.choice(['SOFT', 'MEDIUM', 'HARD'])
             c.tire_temp = initial_tire_temp  # Initialize based on ambient temperature
@@ -303,6 +304,9 @@ class RaceSim:
         # Also factor in grip coefficient for wear effects
         base *= (0.95 + 0.1 * self.tyre_grip_coeff(car))
         base *= (1 - 0.001 * car.fuel)
+        # DRS speed boost: 10% increase when DRS is active
+        if getattr(car, 'drs_active', False):
+            base *= 1.10
         return base
 
     def error_probability(self, car):
@@ -316,11 +320,27 @@ class RaceSim:
         """
         Calculate pitstop probability based on tyre wear.
         Starts at 0% when wear = 0.8, increases linearly to 100% at wear = 1.0
+        Includes smart pitstop strategy to avoid simultaneous pitstops.
         """
         if car.wear < 0.8:
             return 0.0
-        # Linear increase from 0% at 0.8 to 100% at 1.0
-        return max(0.0, (car.wear - 0.8) / 0.2)
+        
+        # Count how many cars are currently pitting
+        cars_in_pit = sum(1 for c in self.cars if c.on_pit)
+        
+        # Base probability: Linear increase from 0% at 0.8 to 100% at 1.0
+        base_prob = max(0.0, (car.wear - 0.8) / 0.2)
+        
+        # Smart pitstop strategy: If 3+ cars are pitting, allow cars to stretch tires
+        if cars_in_pit >= 3 and 0.8 <= car.wear < 0.95:
+            # Reduce probability by 50% to allow stretching
+            base_prob *= 0.5
+        
+        # At critical wear (0.95+), always pit regardless of others
+        if car.wear >= 0.95:
+            base_prob = min(1.0, base_prob)
+        
+        return base_prob
 
     def start_race(self):
         """Start the race - allows simulation to proceed"""
@@ -330,6 +350,9 @@ class RaceSim:
         # Only advance simulation if race has started
         if not self.race_started:
             return
+        
+        # Calculate leaderboard once per step for DRS detection
+        sorted_cars = self.get_leaderboard()
         
         for car in self.cars:
             if car.on_pit:
@@ -357,6 +380,31 @@ class RaceSim:
             u = self.track['s_to_u'](car.s)
             curv = self.track['curv'](u)
             
+            # DRS Detection and Activation (before speed calculations)
+            car.drs_active = False
+            # Find car position in leaderboard
+            car_position = next((i for i, c in enumerate(sorted_cars) if c == car), -1)
+            
+            # DRS rules: Active after 3 laps by leader, within 1s of car ahead, on straights
+            leader = sorted_cars[0] if sorted_cars else None
+            if leader and leader.laps_completed >= 3 and car_position > 0:
+                car_ahead = sorted_cars[car_position - 1]
+                # Calculate time gap to car ahead (positive if car is behind)
+                # Use distance-based calculation for accuracy
+                track_length = self.track['total_length']
+                lap_diff = car.laps_completed - car_ahead.laps_completed
+                distance_gap = (lap_diff * track_length) + (car_ahead.s - car.s)
+                # Convert distance gap to time gap using current speed
+                if car.v > 0.1:
+                    time_gap = distance_gap / car.v
+                else:
+                    time_gap = 999.0  # Very large gap if car is stopped
+                # Check if on straight (low curvature)
+                is_straight = curv < 0.001
+                # DRS active if within 1 second and on straight
+                if 0 < time_gap <= 1.0 and is_straight:
+                    car.drs_active = True
+            
             # Lookahead to anticipate upcoming corners
             lookahead_distance = car.v * 2.0  # Look 2 seconds ahead
             u_ahead = self.track['s_to_u'](car.s + lookahead_distance)
@@ -364,7 +412,7 @@ class RaceSim:
             
             v_corner = self.cornering_speed(car, curv)
             v_corner_ahead = self.cornering_speed(car, curv_ahead)
-            v_straight = self.straight_speed(car)
+            v_straight = self.straight_speed(car)  # This now includes DRS boost if active
             
             # Use the more restrictive speed limit (current corner or upcoming corner)
             target_v = min(v_straight, v_corner, v_corner_ahead)
@@ -408,6 +456,9 @@ class RaceSim:
             # Tyre wear calculation with compound-specific rates
             base_wear_rate = 0.0005 * (1 + 0.8 * (1 - self.tyre_grip_coeff(car)))
             wear_rate_multiplier = TYRE_WEAR_RATES.get(car.tyre, 1.0)
+            # DRS wear penalty: 5% increase when DRS is active
+            if getattr(car, 'drs_active', False):
+                wear_rate_multiplier *= 1.05
             car.wear += base_wear_rate * wear_rate_multiplier * self.dt
             car.wear = min(car.wear, 0.99)
             
@@ -495,9 +546,9 @@ class RaceSim:
             car.tyre = random.choice(['SOFT', 'MEDIUM', 'HARD'])
             ambient_temp = self.weather.get('track_temp', 25.0)
             car.tire_temp = ambient_temp + 10.0
-            # Spread start positions slightly
+            # F1 grid start: all cars start at same position with 2m spacing
             car_index = self.cars.index(car)
-            car.s = car_index * (self.track['total_length'] / len(self.cars)) * 0.6
+            car.s = car_index * 2.0  # 2 meters between consecutive cars
 
 # -------------------- FastAPI + WebSocket Server --------------------
 

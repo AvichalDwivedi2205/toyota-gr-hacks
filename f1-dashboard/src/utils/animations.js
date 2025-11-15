@@ -66,7 +66,8 @@ export const checkeredFlag = (element, options = {}) => {
   const {
     duration = 1000,
     size = 20,
-    colors = ['#FFFFFF', '#000000']
+    colors = ['#FFFFFF', '#000000'],
+    lapNumber = null
   } = options;
 
   if (!element) return;
@@ -92,7 +93,29 @@ export const checkeredFlag = (element, options = {}) => {
   element.style.position = 'relative';
   element.appendChild(pattern);
 
-  return anime({
+  // Add lap number text overlay if provided
+  let lapText = null;
+  if (lapNumber !== null && lapNumber !== undefined) {
+    lapText = document.createElement('div');
+    lapText.className = 'checkered-flag-lap-text';
+    lapText.textContent = `LAP ${lapNumber}`;
+    lapText.style.position = 'absolute';
+    lapText.style.top = '50%';
+    lapText.style.left = '50%';
+    lapText.style.transform = 'translate(-50%, -50%)';
+    lapText.style.fontSize = '32px';
+    lapText.style.fontWeight = '900';
+    lapText.style.color = '#FFFFFF';
+    lapText.style.textShadow = '2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(225, 6, 0, 0.8)';
+    lapText.style.zIndex = '21';
+    lapText.style.pointerEvents = 'none';
+    lapText.style.opacity = '0';
+    lapText.style.fontFamily = 'F1-Bold, sans-serif';
+    lapText.style.letterSpacing = '2px';
+    element.appendChild(lapText);
+  }
+
+  const animation = anime({
     targets: pattern,
     opacity: [0, 1, 1, 0],
     scale: [0.8, 1, 1, 1.2],
@@ -100,8 +123,22 @@ export const checkeredFlag = (element, options = {}) => {
     easing: 'easeInOutQuad',
     complete: () => {
       pattern.remove();
+      if (lapText) lapText.remove();
     }
   });
+
+  // Animate lap text separately
+  if (lapText) {
+    anime({
+      targets: lapText,
+      opacity: [0, 1, 1, 0],
+      scale: [0.5, 1.1, 1, 1.2],
+      duration: duration,
+      easing: 'easeInOutQuad'
+    });
+  }
+
+  return animation;
 };
 
 /**
