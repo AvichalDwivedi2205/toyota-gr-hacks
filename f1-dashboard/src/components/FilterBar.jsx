@@ -120,23 +120,6 @@ const FilterBar = ({ weather = { rain: 0, track_temp: 25, wind: 0 }, tyreDistrib
           ))}
         </div>
       </div>
-
-      <div className="filter-group strategy-recommendation">
-        <span className="filter-label">Strategy:</span>
-        <div className="strategy-content">
-          <div 
-            className="strategy-tyre-indicator"
-            style={{ backgroundColor: getTyreColor(recommendation) }}
-          ></div>
-          <span 
-            className="strategy-value"
-            style={{ color: getTyreColor(recommendation) }}
-          >
-            {recommendation}
-          </span>
-          <span className="strategy-label">Recommended</span>
-        </div>
-      </div>
     </motion.div>
   );
 };
