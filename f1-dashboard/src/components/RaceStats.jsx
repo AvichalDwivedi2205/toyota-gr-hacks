@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, TrendingUp, Clock, Zap } from 'lucide-react';
+import { animatedCounter, lapCounterFlip } from '../utils/animations';
 import './RaceStats.css';
 
 const RaceStats = ({ cars = [], raceTime = 0 }) => {
@@ -12,6 +13,12 @@ const RaceStats = ({ cars = [], raceTime = 0 }) => {
     activeDRS: 0
   });
   const [prevPositions, setPrevPositions] = useState({});
+  const overtakesRef = useRef(null);
+  const pitStopsRef = useRef(null);
+  const drsRef = useRef(null);
+  const prevOvertakesRef = useRef(0);
+  const prevPitStopsRef = useRef(0);
+  const prevDRSRef = useRef(0);
 
   useEffect(() => {
     if (!cars || cars.length === 0) return;
@@ -57,14 +64,34 @@ const RaceStats = ({ cars = [], raceTime = 0 }) => {
 
     // Count active DRS
     const activeDRS = cars.filter(c => c.drs_active).length;
-
-    setStats(prev => ({
-      fastestLap: fastest.car || prev.fastestLap,
-      fastestLapTime: fastest.car ? fastest.time : prev.fastestLapTime,
-      totalOvertakes: prev.totalOvertakes + newOvertakes,
-      totalPitStops: totalPitStops,
-      activeDRS: activeDRS
-    }));
+    
+    setStats(prev => {
+      const newTotalOvertakes = prev.totalOvertakes + newOvertakes;
+      
+      // Animate counters after state update
+      setTimeout(() => {
+        if (overtakesRef.current && newTotalOvertakes !== prevOvertakesRef.current) {
+          animatedCounter(overtakesRef.current, newTotalOvertakes, { duration: 600, decimals: 0 });
+          prevOvertakesRef.current = newTotalOvertakes;
+        }
+        if (pitStopsRef.current && totalPitStops !== prevPitStopsRef.current) {
+          animatedCounter(pitStopsRef.current, totalPitStops, { duration: 600, decimals: 0 });
+          prevPitStopsRef.current = totalPitStops;
+        }
+        if (drsRef.current && activeDRS !== prevDRSRef.current) {
+          animatedCounter(drsRef.current, activeDRS, { duration: 600, decimals: 0 });
+          prevDRSRef.current = activeDRS;
+        }
+      }, 0);
+      
+      return {
+        fastestLap: fastest.car || prev.fastestLap,
+        fastestLapTime: fastest.car ? fastest.time : prev.fastestLapTime,
+        totalOvertakes: newTotalOvertakes,
+        totalPitStops: totalPitStops,
+        activeDRS: activeDRS
+      };
+    });
 
     setPrevPositions(currentPositions);
   }, [cars, raceTime]);
@@ -107,7 +134,7 @@ const RaceStats = ({ cars = [], raceTime = 0 }) => {
           <TrendingUp className="stat-icon" size={24} />
           <div className="stat-content">
             <div className="stat-label">Overtakes</div>
-            <div className="stat-value">{stats.totalOvertakes}</div>
+            <div className="stat-value" ref={overtakesRef}>{stats.totalOvertakes}</div>
             <div className="stat-subvalue">Total</div>
           </div>
         </motion.div>
@@ -120,7 +147,7 @@ const RaceStats = ({ cars = [], raceTime = 0 }) => {
           <Clock className="stat-icon" size={24} />
           <div className="stat-content">
             <div className="stat-label">Pit Stops</div>
-            <div className="stat-value">{stats.totalPitStops}</div>
+            <div className="stat-value" ref={pitStopsRef}>{stats.totalPitStops}</div>
             <div className="stat-subvalue">Total</div>
           </div>
         </motion.div>
@@ -133,7 +160,7 @@ const RaceStats = ({ cars = [], raceTime = 0 }) => {
           <Zap className="stat-icon" size={24} />
           <div className="stat-content">
             <div className="stat-label">DRS Zones</div>
-            <div className="stat-value">{stats.activeDRS}</div>
+            <div className="stat-value" ref={drsRef}>{stats.activeDRS}</div>
             <div className="stat-subvalue">Active</div>
           </div>
         </motion.div>

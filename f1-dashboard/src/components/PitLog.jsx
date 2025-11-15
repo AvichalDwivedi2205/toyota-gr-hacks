@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wrench, Clock } from 'lucide-react';
+import { pitStopCountdown, speedStreak } from '../utils/animations';
 import './PitLog.css';
 
 const PitLog = ({ cars = [], raceTime = 0 }) => {
@@ -10,6 +11,8 @@ const PitLog = ({ cars = [], raceTime = 0 }) => {
     pitstopCounts: {},
     pitLap: {}
   });
+  const pitLogContainerRef = useRef(null);
+  const eventRefs = useRef({});
 
   useEffect(() => {
     if (!cars || cars.length === 0) return;
@@ -67,7 +70,28 @@ const PitLog = ({ cars = [], raceTime = 0 }) => {
     });
 
     if (newPitEvents.length > 0) {
-      setPitEvents(prev => [...prev, ...newPitEvents].slice(-30)); // Keep last 30 pit events
+      setPitEvents(prev => {
+        const updated = [...prev, ...newPitEvents].slice(-30); // Keep last 30 pit events
+        // Animate new entries
+        setTimeout(() => {
+          newPitEvents.forEach((event, idx) => {
+            const eventIndex = updated.length - newPitEvents.length + idx;
+            const eventElement = eventRefs.current[eventIndex];
+            if (eventElement) {
+              speedStreak(eventElement, {
+                duration: 500,
+                color: getEventColor(event.type),
+                intensity: 0.8
+              });
+              // Pit stop countdown for entries
+              if (event.type === 'entry' && pitLogContainerRef.current) {
+                pitStopCountdown(pitLogContainerRef.current, 3);
+              }
+            }
+          });
+        }, 50);
+        return updated;
+      });
     }
 
     setPrevState({
@@ -90,7 +114,7 @@ const PitLog = ({ cars = [], raceTime = 0 }) => {
   return (
     <div className="pit-log">
       <h3 className="pit-log-header">Pit Log</h3>
-      <div className="pit-log-container">
+      <div className="pit-log-container" ref={pitLogContainerRef}>
         <AnimatePresence initial={false}>
           {pitEvents.length === 0 ? (
             <div className="pit-log-empty">No pit stops yet</div>
@@ -98,6 +122,7 @@ const PitLog = ({ cars = [], raceTime = 0 }) => {
             pitEvents.map((event, idx) => (
               <motion.div
                 key={idx}
+                ref={(el) => { if (el) eventRefs.current[idx] = el; }}
                 className={`pit-log-entry pit-log-${event.type}`}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}

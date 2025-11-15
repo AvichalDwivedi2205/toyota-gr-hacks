@@ -2,6 +2,18 @@
   position: relative;
 }
 
+.track-checkered-flag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: transparent;
+  z-index: 20;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 .track-view {
   background: #000000;
   border: 1px solid rgba(225, 6, 0, 0.4);

@@ -2,12 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 import { Gauge as GaugeIcon, Zap } from 'lucide-react';
+import { speedometerSweep, gearShift, telemetryFlow, animatedCounter } from '../utils/animations';
 import './TelemetryPanel.css';
 
 const TelemetryPanel = ({ selectedCar, cars = [] }) => {
   const [telemetryData, setTelemetryData] = useState([]);
   const maxDataPoints = 50;
   const timeRef = useRef(0);
+  const speedValueRef = useRef(null);
+  const wearValueRef = useRef(null);
+  const gearDisplayRef = useRef(null);
+  const chartContainerRef = useRef(null);
+  const prevGearRef = useRef(null);
+  const prevSpeedRef = useRef(0);
+  const prevWearRef = useRef(0);
 
   useEffect(() => {
     if (!selectedCar) return;
@@ -27,7 +35,49 @@ const TelemetryPanel = ({ selectedCar, cars = [] }) => {
       const updated = [...prev, newPoint];
       return updated.slice(-maxDataPoints);
     });
+
+    // Animate speedometer sweep
+    if (speedValueRef.current && car.speed !== prevSpeedRef.current) {
+      speedometerSweep(speedValueRef.current, car.speed || 0, {
+        duration: 800,
+        min: 0,
+        max: 350
+      });
+      prevSpeedRef.current = car.speed || 0;
+    }
+
+    // Animate wear counter
+    if (wearValueRef.current && car.wear !== undefined) {
+      const wearPercent = (car.wear || 0) * 100;
+      if (Math.abs(wearPercent - prevWearRef.current) > 1) {
+        animatedCounter(wearValueRef.current, wearPercent, {
+          duration: 600,
+          decimals: 0
+        });
+        prevWearRef.current = wearPercent;
+      }
+    }
+
+    // Animate gear shift
+    if (gearDisplayRef.current && car.gear !== prevGearRef.current) {
+      gearShift(gearDisplayRef.current, car.gear || 1, { duration: 400 });
+      prevGearRef.current = car.gear || 1;
+    }
   }, [selectedCar, cars]);
+
+  // Telemetry flow animation
+  useEffect(() => {
+    if (chartContainerRef.current && selectedCar) {
+      const flowInterval = setInterval(() => {
+        telemetryFlow(chartContainerRef.current, {
+          duration: 2000,
+          color: '#4a90e2',
+          direction: 'right'
+        });
+      }, 3000);
+      return () => clearInterval(flowInterval);
+    }
+  }, [selectedCar]);
 
   if (!selectedCar) {
     return (
@@ -74,7 +124,7 @@ const TelemetryPanel = ({ selectedCar, cars = [] }) => {
                   />
                 </LineChart>
               </ResponsiveContainer>
-              <div className="gauge-value">{Math.round(wearPercentage)}</div>
+              <div className="gauge-value" ref={wearValueRef}>{Math.round(wearPercentage)}</div>
               <div className="gauge-unit">%</div>
             </div>
           </div>
@@ -93,7 +143,7 @@ const TelemetryPanel = ({ selectedCar, cars = [] }) => {
                   />
                 </LineChart>
               </ResponsiveContainer>
-              <div className="gauge-value">{Math.round(car.speed || 0)}</div>
+              <div className="gauge-value" ref={speedValueRef}>{Math.round(car.speed || 0)}</div>
               <div className="gauge-unit">km/h</div>
             </div>
           </div>
@@ -101,7 +151,10 @@ const TelemetryPanel = ({ selectedCar, cars = [] }) => {
           <div className="gauge-container">
             <div className="gauge-label">Gear</div>
             <div className="gear-display">
-              <div className={`gear-number gear-${car.gear || 1}`}>
+              <div 
+                ref={gearDisplayRef}
+                className={`gear-number gear-${car.gear || 1}`}
+              >
                 {car.gear || 1}
               </div>
             </div>
@@ -109,7 +162,7 @@ const TelemetryPanel = ({ selectedCar, cars = [] }) => {
         </div>
 
         {/* Charts */}
-        <div className="charts-row">
+        <div className="charts-row" ref={chartContainerRef}>
           <div className="chart-container">
             <div className="chart-title">Speed vs Time</div>
             <ResponsiveContainer width="100%" height={150}>

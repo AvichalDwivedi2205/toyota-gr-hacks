@@ -1,9 +1,24 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CloudRain, Thermometer, Wind, Droplets } from 'lucide-react';
+import { speedStreak } from '../utils/animations';
 import './FilterBar.css';
 
 const FilterBar = ({ weather = { rain: 0, track_temp: 25, wind: 0 }, tyreDistribution = {} }) => {
+  const filterBarRef = useRef(null);
+  const prevWeatherRef = useRef(weather);
+
+  useEffect(() => {
+    // Animate when weather changes significantly
+    if (filterBarRef.current && Math.abs(weather.rain - prevWeatherRef.current.rain) > 0.1) {
+      speedStreak(filterBarRef.current, {
+        duration: 600,
+        color: weather.rain > 0.3 ? '#00aaff' : '#E10600',
+        intensity: 0.5
+      });
+    }
+    prevWeatherRef.current = weather;
+  }, [weather]);
   const getRainLevel = (rain) => {
     if (rain < 0.1) return 'Dry';
     if (rain < 0.3) return 'Light Rain';
@@ -39,6 +54,7 @@ const FilterBar = ({ weather = { rain: 0, track_temp: 25, wind: 0 }, tyreDistrib
 
   return (
     <motion.div
+      ref={filterBarRef}
       className="filter-bar"
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}

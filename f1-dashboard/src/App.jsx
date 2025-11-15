@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRaceData } from './hooks/useRaceData';
 import TrackView from './components/TrackView';
 import Leaderboard from './components/Leaderboard';
@@ -9,6 +9,7 @@ import PitLog from './components/PitLog';
 import CarDetails from './components/CarDetails';
 import ConnectionStatus from './components/ConnectionStatus';
 import FilterBar from './components/FilterBar';
+import { pageLoadReveal, speedLines } from './utils/animations';
 import './App.css';
 
 const WS_URL = 'ws://localhost:8000/ws';
@@ -24,6 +25,27 @@ function App() {
 
   const [selectedCar, setSelectedCar] = useState(null);
   const [showCarDetails, setShowCarDetails] = useState(false);
+  const appRef = useRef(null);
+  const headerRef = useRef(null);
+  const dashboardRef = useRef(null);
+
+  // Page load animations
+  useEffect(() => {
+    if (appRef.current) {
+      pageLoadReveal(appRef.current, { duration: 1500 });
+    }
+    if (headerRef.current) {
+      // Speed lines in header
+      const speedLineInterval = setInterval(() => {
+        speedLines(headerRef.current, { 
+          duration: 2000, 
+          direction: 'horizontal',
+          intensity: 0.5 
+        });
+      }, 3000);
+      return () => clearInterval(speedLineInterval);
+    }
+  }, []);
 
   // Debug logging
   React.useEffect(() => {
@@ -38,8 +60,8 @@ function App() {
   const selectedCarData = raceState.cars?.find(c => c.name === selectedCar);
 
   return (
-    <div className="app">
-      <header className="app-header">
+    <div className="app" ref={appRef}>
+      <header className="app-header" ref={headerRef}>
         <div className="header-content">
           <h1>FORMULA 1 LIVE RACE</h1>
           <p className="subtitle">Real-time Race Simulation & Telemetry</p>
@@ -57,7 +79,7 @@ function App() {
         tyreDistribution={raceState.tyre_distribution || {}}
       />
 
-      <div className="dashboard-grid">
+      <div className="dashboard-grid" ref={dashboardRef}>
         <div className="left-column">
           <div className="track-section">
             {trackData ? (

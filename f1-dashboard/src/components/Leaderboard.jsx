@@ -1,12 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gauge, Zap, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { positionChange, checkeredFlag, drsPulse, overtakingBadge, lapCounterFlip, speedLines } from '../utils/animations';
 import './Leaderboard.css';
 
 const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) => {
   const [sortedCars, setSortedCars] = useState([]);
   const [prevPositions, setPrevPositions] = useState({});
   const [showAll, setShowAll] = useState(false);
+  const rowRefs = useRef({});
+  const drsRefs = useRef({});
+  const overtakingRefs = useRef({});
+  const lapCounterRef = useRef(null);
+  const prevLapRef = useRef(0);
+  const leaderboardRef = useRef(null);
 
   useEffect(() => {
     if (!cars || cars.length === 0) {
@@ -16,12 +23,73 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
     const newSorted = [...cars].sort((a, b) => (a.position || 0) - (b.position || 0));
     
     // Detect position changes for animations
+    const oldPositions = { ...prevPositions };
     const newPositions = {};
     newSorted.forEach(car => {
       newPositions[car.name] = car.position;
+      
+      // Animate position changes
+      if (oldPositions[car.name] && oldPositions[car.name] !== car.position) {
+        const rowElement = rowRefs.current[car.name];
+        if (rowElement) {
+          const direction = oldPositions[car.name] > car.position ? 'up' : 'down';
+          positionChange(rowElement, direction, { duration: 600, intensity: 1 });
+          
+          // Speed lines for position changes
+          speedLines(rowElement, { 
+            duration: 800, 
+            direction: 'horizontal',
+            intensity: 0.8,
+            color: car.color || '#E10600'
+          });
+        }
+      }
+      
+      // Checkered flag for podium positions
+      if (car.position <= 3 && oldPositions[car.name] && oldPositions[car.name] > 3) {
+        const rowElement = rowRefs.current[car.name];
+        if (rowElement) {
+          checkeredFlag(rowElement, { 
+            duration: 1000,
+            size: 10,
+            colors: ['#FFD700', '#000000']
+          });
+        }
+      }
     });
     setPrevPositions(newPositions);
     setSortedCars(newSorted);
+  }, [cars]);
+
+  // Animate DRS indicators
+  useEffect(() => {
+    sortedCars.forEach(car => {
+      if (car.drs_active && drsRefs.current[car.name]) {
+        drsPulse(drsRefs.current[car.name], { 
+          duration: 1000,
+          color: '#00ff00',
+          intensity: 1
+        });
+      }
+    });
+  }, [sortedCars]);
+
+  // Animate overtaking badges
+  useEffect(() => {
+    sortedCars.forEach(car => {
+      if (car.overtaking && overtakingRefs.current[car.name]) {
+        overtakingBadge(overtakingRefs.current[car.name], { duration: 800 });
+      }
+    });
+  }, [sortedCars]);
+
+  // Lap counter flip animation
+  useEffect(() => {
+    const currentLap = cars && cars.length > 0 ? Math.max(...cars.map(c => c.laps || 0)) : 0;
+    if (currentLap > prevLapRef.current && lapCounterRef.current) {
+      lapCounterFlip(lapCounterRef.current, currentLap, { duration: 500 });
+    }
+    prevLapRef.current = currentLap;
   }, [cars]);
 
   const getTyreColor = (tyre) => {
@@ -65,7 +133,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
   const leader = sortedCars.find(c => c.position === 1);
 
   return (
-    <div className="leaderboard">
+    <div className="leaderboard" ref={leaderboardRef}>
       <div className="leaderboard-header">
         <motion.h2
           initial={{ opacity: 0, y: -20 }}
@@ -85,7 +153,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
             ⏱️ {formatTime(raceTime)}
           </motion.span>
           <span className="lap-counter">
-            🏁 Lap {cars && cars.length > 0 ? Math.max(...cars.map(c => c.laps || 0)) : 0} / {totalLaps}
+            🏁 Lap <span ref={lapCounterRef}>{cars && cars.length > 0 ? Math.max(...cars.map(c => c.laps || 0)) : 0}</span> / {totalLaps}
           </span>
         </div>
       </div>
@@ -111,6 +179,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
             return (
               <motion.div
                 key={car.name}
+                ref={(el) => { if (el) rowRefs.current[car.name] = el; }}
                 initial={{ opacity: 0, x: positionChange > 0 ? -50 : positionChange < 0 ? 50 : 0 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0 }}
@@ -133,7 +202,14 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
                 <span className="col-driver">
                   <span className="driver-color" style={{ backgroundColor: car.color }}></span>
                   <span className="driver-name">{car.name}</span>
-                  {car.overtaking && <span className="overtaking-badge">OVT</span>}
+                  {car.overtaking && (
+                    <span 
+                      ref={(el) => { if (el) overtakingRefs.current[car.name] = el; }}
+                      className="overtaking-badge"
+                    >
+                      OVT
+                    </span>
+                  )}
                 </span>
                 
                 <span className="col-gap">
@@ -187,13 +263,12 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
                 
                 <span className="col-drs">
                   {car.drs_active ? (
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ repeat: Infinity, duration: 1 }}
+                    <div
+                      ref={(el) => { if (el) drsRefs.current[car.name] = el; }}
                       className="drs-active"
                     >
                       <Zap size={14} />
-                    </motion.div>
+                    </div>
                   ) : (
                     <div className="drs-inactive">--</div>
                   )}

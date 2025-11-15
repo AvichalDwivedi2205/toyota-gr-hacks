@@ -561,10 +561,14 @@ async def simulation_loop():
             
             # Broadcast to all connected clients
             disconnected = set()
-            for connection in active_connections:
+            for connection in active_connections.copy():  # Use copy to avoid modification during iteration
                 try:
                     await connection.send_json(state)
+                except WebSocketDisconnect:
+                    # Client disconnected normally
+                    disconnected.add(connection)
                 except Exception:
+                    # Handle any other connection errors (ClientDisconnected, etc.)
                     disconnected.add(connection)
             
             # Remove disconnected clients
@@ -609,13 +613,17 @@ async def websocket_endpoint(websocket: WebSocket):
         
         # Send initial track data
         if track_data:
-            await websocket.send_json({
-                "type": "track",
-                "data": {
-                    "points": track_data['track_points'],
-                    "total_length": float(track_data['total_length'])
-                }
-            })
+            try:
+                await websocket.send_json({
+                    "type": "track",
+                    "data": {
+                        "points": track_data['track_points'],
+                        "total_length": float(track_data['total_length'])
+                    }
+                })
+            except (WebSocketDisconnect, Exception):
+                # Client disconnected before we could send track data
+                return
         
         # Keep connection alive
         while True:

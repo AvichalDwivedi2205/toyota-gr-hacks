@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react';
+import { checkeredFlag, racingSpotlight, speedStreak, tireMarks } from '../utils/animations';
 import './TrackView.css';
 
 const TrackView = ({ trackData, cars = [], onCarClick }) => {
@@ -13,6 +14,12 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const carTrailsRef = useRef(new Map());
+  const trackViewRef = useRef(null);
+  const finishLineRef = useRef(null);
+  const checkeredFlagRef = useRef(null);
+  const prevCarAnglesRef = useRef(new Map());
+  const tireMarkPositionsRef = useRef([]);
+  const prevLapRef = useRef(0);
 
   // Smooth interpolation for car positions
   const [interpolatedCars, setInterpolatedCars] = useState(cars || []);
@@ -29,9 +36,71 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
         return car;
       });
       setInterpolatedCars(interpolated);
+      
+      // Detect sharp turns for tire marks
+      cars.forEach(car => {
+        const prevAngle = prevCarAnglesRef.current.get(car.name);
+        if (prevAngle !== undefined && car.angle !== undefined) {
+          const angleDiff = Math.abs(car.angle - prevAngle);
+          // If angle change is significant (sharp turn)
+          if (angleDiff > 0.3 && car.speed > 100) {
+            // Store tire mark position (will be drawn on canvas)
+            tireMarkPositionsRef.current.push({
+              x: car.x,
+              y: car.y,
+              angle: car.angle,
+              color: car.color,
+              time: Date.now()
+            });
+            // Keep only recent tire marks
+            const now = Date.now();
+            tireMarkPositionsRef.current = tireMarkPositionsRef.current.filter(
+              mark => now - mark.time < 5000
+            );
+          }
+        }
+        prevCarAnglesRef.current.set(car.name, car.angle);
+      });
+      
       prevCarsRef.current = cars;
     }
   }, [cars]);
+
+  // Checkered flag animation at top of track map when lap changes
+  useEffect(() => {
+    if (checkeredFlagRef.current && cars && cars.length > 0) {
+      const maxLap = Math.max(...cars.map(c => c.laps || 0));
+      
+      if (maxLap > prevLapRef.current && maxLap > 0) {
+        checkeredFlag(checkeredFlagRef.current, {
+          duration: 1000,
+          size: 20,
+          colors: ['#FFFFFF', '#000000']
+        });
+      }
+      prevLapRef.current = maxLap;
+    }
+  }, [cars]);
+
+  // Racing spotlight for selected car
+  useEffect(() => {
+    if (followCar && trackViewRef.current) {
+      const spotlightElement = document.createElement('div');
+      spotlightElement.className = 'car-spotlight';
+      trackViewRef.current.appendChild(spotlightElement);
+      const animation = racingSpotlight(spotlightElement, {
+        duration: 2000,
+        color: '#FFD700'
+      });
+      
+      return () => {
+        animation.pause();
+        if (spotlightElement.parentNode) {
+          spotlightElement.parentNode.removeChild(spotlightElement);
+        }
+      };
+    }
+  }, [followCar]);
 
   const drawTrack = useCallback((ctx, transform, points) => {
     // Draw track surface with gradient
@@ -96,17 +165,21 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
       }
     }
 
-    // Draw start/finish line
+    // Draw start/finish line with checkered pattern
     if (points.length > 0) {
       const [x1, y1] = transform(points[0][0], points[0][1]);
+      const lineLength = 40;
+      const checkSize = 4;
+      
+      // Draw checkered pattern
+      for (let i = 0; i < lineLength / checkSize; i++) {
+        ctx.fillStyle = (i % 2 === 0) ? '#FFFFFF' : '#000000';
+        ctx.fillRect(x1 - lineLength/2 + i * checkSize, y1 - checkSize/2, checkSize, checkSize);
+      }
+      
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 4;
-      ctx.setLineDash([10, 5]);
-      ctx.beginPath();
-      ctx.moveTo(x1 - 20, y1);
-      ctx.lineTo(x1 + 20, y1);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x1 - lineLength/2, y1 - checkSize/2, lineLength, checkSize);
     }
   }, []);
 
@@ -159,9 +232,33 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
     ctx.fill();
     ctx.restore();
 
-    // Draw speed trail
+    // Draw speed trail with enhanced streaks for high speed
     if (car.speed > 50) {
       drawCarTrail(ctx, car, transform);
+      
+      // Enhanced speed streaks for very fast cars
+      if (car.speed > 200) {
+        const [x, y] = transform(car.x, car.y);
+        const streakLength = (car.speed / 10) * 0.5;
+        const streakGradient = ctx.createLinearGradient(
+          x - Math.cos(car.angle) * streakLength,
+          y - Math.sin(car.angle) * streakLength,
+          x,
+          y
+        );
+        streakGradient.addColorStop(0, 'transparent');
+        streakGradient.addColorStop(0.5, `${car.color}80`);
+        streakGradient.addColorStop(1, car.color);
+        
+        ctx.strokeStyle = streakGradient;
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(x - Math.cos(car.angle) * streakLength, y - Math.sin(car.angle) * streakLength);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+      }
     }
 
     ctx.save();
@@ -302,6 +399,32 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
     // Draw track
     drawTrack(ctx, transform, points);
 
+    // Draw tire marks
+    const now = Date.now();
+    tireMarkPositionsRef.current.forEach(mark => {
+      if (now - mark.time < 5000) {
+        const [x, y] = transform(mark.x, mark.y);
+        const age = (now - mark.time) / 5000;
+        ctx.strokeStyle = `${mark.color}${Math.floor((1 - age) * 100).toString(16).padStart(2, '0')}`;
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 1 - age;
+        ctx.beginPath();
+        // Draw skid marks
+        for (let i = 0; i < 3; i++) {
+          const offsetX = Math.cos(mark.angle + Math.PI / 2) * (i - 1) * 3;
+          const offsetY = Math.sin(mark.angle + Math.PI / 2) * (i - 1) * 3;
+          ctx.moveTo(x + offsetX, y + offsetY);
+          ctx.lineTo(x + offsetX - Math.cos(mark.angle) * 10, y + offsetY - Math.sin(mark.angle) * 10);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+      }
+    });
+    // Clean up old tire marks
+    tireMarkPositionsRef.current = tireMarkPositionsRef.current.filter(
+      mark => now - mark.time < 5000
+    );
+
     // Draw cars
     if (interpolatedCars && interpolatedCars.length > 0) {
       // Sort by position for proper layering
@@ -362,13 +485,20 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
 
   return (
     <div className="track-view-container">
+      {/* Checkered Flag at top of track map */}
       <div 
+        ref={checkeredFlagRef}
+        className="track-checkered-flag"
+      ></div>
+      <div 
+        ref={trackViewRef}
         className="track-view"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
+        <div ref={finishLineRef} className="finish-line-overlay"></div>
         <canvas 
           ref={canvasRef} 
           width={1200} 

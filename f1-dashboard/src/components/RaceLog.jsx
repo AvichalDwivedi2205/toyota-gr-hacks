@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Zap, Wrench } from 'lucide-react';
+import { speedStreak } from '../utils/animations';
 import './RaceLog.css';
 
 const RaceLog = ({ cars = [], raceTime = 0 }) => {
@@ -11,6 +12,7 @@ const RaceLog = ({ cars = [], raceTime = 0 }) => {
     pitState: {},
     pitstopCounts: {}
   });
+  const eventRefs = useRef({});
 
   useEffect(() => {
     if (!cars || cars.length === 0) return;
@@ -82,7 +84,24 @@ const RaceLog = ({ cars = [], raceTime = 0 }) => {
     });
 
     if (newEvents.length > 0) {
-      setEvents(prev => [...prev, ...newEvents].slice(-50)); // Keep last 50 events
+      setEvents(prev => {
+        const updated = [...prev, ...newEvents].slice(-50); // Keep last 50 events
+        // Animate new entries
+        setTimeout(() => {
+          newEvents.forEach((event, idx) => {
+            const eventIndex = updated.length - newEvents.length + idx;
+            const eventElement = eventRefs.current[eventIndex];
+            if (eventElement) {
+              speedStreak(eventElement, {
+                duration: 500,
+                color: getEventColor(event.type),
+                intensity: 0.8
+              });
+            }
+          });
+        }, 50);
+        return updated;
+      });
     }
 
     setPrevState({
@@ -136,6 +155,7 @@ const RaceLog = ({ cars = [], raceTime = 0 }) => {
             events.map((event, idx) => (
               <motion.div
                 key={idx}
+                ref={(el) => { if (el) eventRefs.current[idx] = el; }}
                 className="log-entry"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}

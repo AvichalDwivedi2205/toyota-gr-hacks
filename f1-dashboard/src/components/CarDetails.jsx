@@ -1,9 +1,22 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Gauge, Zap, Thermometer, Droplet } from 'lucide-react';
+import { checkeredFlag } from '../utils/animations';
 import './CarDetails.css';
 
 const CarDetails = ({ car, isOpen, onClose }) => {
+  const modalRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen && modalRef.current) {
+      checkeredFlag(modalRef.current, {
+        duration: 800,
+        size: 15,
+        colors: ['#FFFFFF', '#000000']
+      });
+    }
+  }, [isOpen]);
+
   if (!car) return null;
 
   return (
@@ -18,6 +31,7 @@ const CarDetails = ({ car, isOpen, onClose }) => {
             onClick={onClose}
           />
           <motion.div
+            ref={modalRef}
             className="car-details-modal"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
