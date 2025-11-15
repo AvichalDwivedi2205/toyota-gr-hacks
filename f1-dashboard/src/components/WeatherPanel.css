@@ -1,10 +1,9 @@
 .weather-panel {
-  background: rgba(26, 31, 58, 0.8);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
+  background: rgba(15, 15, 15, 0.95);
+  border: 1px solid rgba(225, 6, 0, 0.3);
+  border-left: 4px solid #E10600;
   padding: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -15,13 +14,12 @@
 .weather-section h3,
 .tyre-section h3 {
   margin: 0 0 16px 0;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #fff 0%, #e0e0e0 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #E10600;
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 10px rgba(225, 6, 0, 0.5);
 }
 
 .weather-grid {
@@ -31,20 +29,20 @@
 }
 
 .weather-item {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(15, 15, 15, 0.6);
   padding: 16px;
-  border-radius: 12px;
+  border: 1px solid rgba(225, 6, 0, 0.2);
+  border-left: 3px solid transparent;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
 }
 
 .weather-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: rgba(225, 6, 0, 0.1);
+  border-left-color: #E10600;
+  box-shadow: 0 0 15px rgba(225, 6, 0, 0.2);
 }
 
 .weather-details {
@@ -126,8 +124,10 @@
 }
 
 .tyre-item.recommended {
-  border: 2px solid #00ff88;
-  background: rgba(0, 255, 136, 0.1);
+  border: 2px solid #E10600;
+  border-left: 4px solid #E10600;
+  background: rgba(225, 6, 0, 0.15);
+  box-shadow: 0 0 20px rgba(225, 6, 0, 0.3);
 }
 
 .tyre-indicator-large {
@@ -157,21 +157,23 @@
   position: absolute;
   top: 8px;
   right: 8px;
-  background: rgba(0, 255, 136, 0.2);
-  color: #00ff88;
-  padding: 2px 6px;
-  border-radius: 4px;
+  background: rgba(225, 6, 0, 0.3);
+  color: #E10600;
+  padding: 3px 8px;
+  border: 1px solid #E10600;
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 900;
   text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 0 10px rgba(225, 6, 0, 0.5);
 }
 
 .tyre-recommendation {
   margin-top: 15px;
-  padding: 12px;
-  background: rgba(102, 126, 234, 0.1);
-  border-radius: 8px;
-  border: 1px solid rgba(102, 126, 234, 0.3);
+  padding: 14px;
+  background: rgba(225, 6, 0, 0.15);
+  border: 1px solid rgba(225, 6, 0, 0.4);
+  border-left: 4px solid #E10600;
   display: flex;
   align-items: center;
   gap: 10px;

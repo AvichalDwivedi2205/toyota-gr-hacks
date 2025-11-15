@@ -3,11 +3,11 @@
 }
 
 .status-bar {
-  background: linear-gradient(135deg, #1a1f3a 0%, #2a2f4a 100%);
-  border-radius: 12px;
+  background: rgba(15, 15, 15, 0.95);
+  border: 1px solid rgba(225, 6, 0, 0.3);
+  border-left: 4px solid #E10600;
   padding: 16px 24px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   gap: 20px;
@@ -28,8 +28,8 @@
 }
 
 .status-dot.connected {
-  background: #44ff44;
-  box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+  background: #E10600;
+  box-shadow: 0 0 15px rgba(225, 6, 0, 0.7);
 }
 
 .status-dot.disconnected {
@@ -64,21 +64,23 @@
 }
 
 .reset-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #E10600 0%, #B80500 100%);
   color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  padding: 10px 24px;
+  font-weight: 900;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(225, 6, 0, 0.4);
 }
 
 .reset-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(225, 6, 0, 0.6);
+  background: linear-gradient(135deg, #FF1800 0%, #E10600 100%);
 }
 
 .reset-button:active:not(:disabled) {

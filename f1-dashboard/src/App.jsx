@@ -39,8 +39,8 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-content">
-          <h1>🏎️ F1 Live Race Dashboard</h1>
-          <p className="subtitle">Enhanced 2D Simulation with Real-time Telemetry</p>
+          <h1>FORMULA 1 LIVE RACE</h1>
+          <p className="subtitle">Real-time Race Simulation & Telemetry</p>
         </div>
       </header>
 
@@ -104,7 +104,7 @@ function App() {
       />
 
       <footer className="app-footer">
-        <p>Built with React Hooks + WebSockets | Enhanced Physics & AI Controllers | Data updates in real-time</p>
+        <p>FORMULA 1 RACE SIMULATION | Real-time Telemetry & Data | Powered by WebSocket Technology</p>
       </footer>
     </div>
   );

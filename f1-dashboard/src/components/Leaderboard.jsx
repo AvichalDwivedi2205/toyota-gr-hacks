@@ -28,6 +28,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
       'SOFT': '#ff0000',
       'MEDIUM': '#ffff00',
       'HARD': '#ffffff',
+      'INTERMEDIATE': '#00aaff',
       'WET': '#00ff00'
     };
     return colors[tyre] || '#999';
@@ -55,7 +56,8 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
 
   const calculateGapToLeader = (car, leader) => {
     if (!leader || car.position === 1) return '--';
-    const gap = (car.total_time - leader.total_time).toFixed(1);
+    // Use time_interval if available, otherwise calculate from total_time
+    const gap = car.time_interval !== undefined ? car.time_interval.toFixed(1) : (car.total_time - leader.total_time).toFixed(1);
     return `+${gap}s`;
   };
 
@@ -69,7 +71,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          Race Leaderboard
+          RACE CLASSIFICATION
         </motion.h2>
         <div className="race-info">
           <motion.span 
@@ -93,7 +95,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
           <span className="col-driver">Driver</span>
           <span className="col-gap">Gap</span>
           <span className="col-speed">Speed</span>
-          <span className="col-rpm">RPM</span>
+          <span className="col-rpm">Wear</span>
           <span className="col-gear">G</span>
           <span className="col-tyre">Tyre</span>
           <span className="col-temp">Temp</span>
@@ -145,7 +147,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
                 <span className="col-rpm">
                   <div className="rpm-gauge">
                     <Gauge size={16} />
-                    <span className="rpm-value">{Math.round(car.rpm || 0)}</span>
+                    <span className="rpm-value">{Math.round((car.wear || 0) * 100)}%</span>
                   </div>
                 </span>
                 
@@ -170,6 +172,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
                       }}
                     ></div>
                   </div>
+                  <span className="wear-percentage">{Math.round((car.wear || 0) * 100)}%</span>
                 </span>
                 
                 <span className="col-temp">

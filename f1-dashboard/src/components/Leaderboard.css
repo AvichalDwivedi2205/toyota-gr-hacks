@@ -1,43 +1,58 @@
 .leaderboard {
-  background: rgba(26, 31, 58, 0.8);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 15, 15, 0.95);
+  border: 1px solid rgba(225, 6, 0, 0.3);
+  border-left: 4px solid #E10600;
+  padding: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.leaderboard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #E10600 50%, transparent);
 }
 
 .leaderboard-header {
-  margin-bottom: 20px;
+  margin-bottom: 0;
+  padding: 20px 20px 16px 20px;
+  background: linear-gradient(180deg, rgba(225, 6, 0, 0.2) 0%, transparent 100%);
+  border-bottom: 2px solid rgba(225, 6, 0, 0.3);
 }
 
 .leaderboard-header h2 {
   margin: 0 0 12px 0;
-  color: #fff;
-  font-size: 24px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #fff 0%, #e0e0e0 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #FFFFFF;
+  font-size: 20px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(225, 6, 0, 0.5);
 }
 
 .race-info {
   display: flex;
-  gap: 20px;
-  font-size: 14px;
-  color: #aaa;
+  gap: 16px;
+  font-size: 13px;
+  color: #B8B8B8;
 }
 
 .race-time, .lap-counter {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(225, 6, 0, 0.15);
+  padding: 6px 12px;
+  border: 1px solid rgba(225, 6, 0, 0.4);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #FFFFFF;
 }
 
 .leaderboard-table {
@@ -49,34 +64,35 @@
   display: grid;
   grid-template-columns: 50px 1.5fr 70px 90px 80px 90px 80px 70px 60px;
   gap: 8px;
-  padding: 12px;
-  background: rgba(102, 126, 234, 0.1);
-  border-radius: 8px 8px 0 0;
-  font-weight: 600;
-  color: #a0a0a0;
-  font-size: 11px;
+  padding: 14px 12px;
+  background: linear-gradient(180deg, rgba(225, 6, 0, 0.25) 0%, rgba(225, 6, 0, 0.1) 100%);
+  font-weight: 900;
+  color: #FFFFFF;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+  letter-spacing: 1.5px;
+  border-bottom: 2px solid #E10600;
+  border-top: 1px solid rgba(225, 6, 0, 0.3);
 }
 
 .table-row {
   display: grid;
   grid-template-columns: 50px 1.5fr 70px 90px 80px 90px 80px 70px 60px;
   gap: 8px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  margin-bottom: 4px;
-  border-radius: 6px;
-  transition: all 0.3s ease;
+  padding: 14px 12px;
+  background: rgba(15, 15, 15, 0.6);
+  margin-bottom: 2px;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
   align-items: center;
   cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .table-row:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: rgba(225, 6, 0, 0.1);
+  border-left-color: #E10600;
+  transform: translateX(2px);
 }
 
 .table-row.in-pit {
@@ -85,36 +101,41 @@
 }
 
 .table-row.podium-gold {
-  background: rgba(255, 215, 0, 0.1);
-  border-left: 4px solid #ffd700;
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+  border-left: 4px solid #FFD700;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
 }
 
 .table-row.podium-silver {
-  background: rgba(192, 192, 192, 0.1);
-  border-left: 4px solid #c0c0c0;
+  background: linear-gradient(90deg, rgba(192, 192, 192, 0.15) 0%, rgba(192, 192, 192, 0.05) 100%);
+  border-left: 4px solid #C0C0C0;
+  box-shadow: 0 0 15px rgba(192, 192, 192, 0.3);
 }
 
 .table-row.podium-bronze {
-  background: rgba(205, 127, 50, 0.1);
-  border-left: 4px solid #cd7f32;
+  background: linear-gradient(90deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.05) 100%);
+  border-left: 4px solid #CD7F32;
+  box-shadow: 0 0 15px rgba(205, 127, 50, 0.3);
 }
 
 .position-badge {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #E10600 0%, #B80500 100%);
   color: white;
   padding: 8px;
-  border-radius: 8px;
   text-align: center;
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: 900;
+  font-size: 18px;
   position: relative;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 0 15px rgba(225, 6, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .position-up {
-  color: #00ff88;
+  color: #E10600;
   font-size: 12px;
   margin-left: 2px;
+  font-weight: 900;
 }
 
 .position-down {
@@ -144,8 +165,8 @@
 }
 
 .overtaking-badge {
-  background: rgba(0, 255, 136, 0.2);
-  color: #00ff88;
+  background: rgba(255, 0, 0, 0.2);
+  color: #ff0000;
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 9px;
@@ -186,7 +207,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #667eea;
+  color: #ff0000;
 }
 
 .rpm-value {
@@ -201,17 +222,17 @@
 }
 
 .gear-badge {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 16px;
-  font-weight: 800;
-  background: rgba(102, 126, 234, 0.2);
-  color: #667eea;
-  border: 2px solid rgba(102, 126, 234, 0.4);
+  font-weight: 900;
+  background: rgba(225, 6, 0, 0.2);
+  color: #E10600;
+  border: 2px solid rgba(225, 6, 0, 0.5);
+  box-shadow: 0 0 10px rgba(225, 6, 0, 0.3);
 }
 
 .col-tyre {
@@ -219,6 +240,7 @@
   align-items: center;
   gap: 8px;
   font-size: 11px;
+  flex-wrap: wrap;
 }
 
 .tyre-indicator {
@@ -248,6 +270,14 @@
   border-radius: 2px;
 }
 
+.wear-percentage {
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  min-width: 35px;
+  text-align: right;
+}
+
 .col-temp {
   font-size: 11px;
   font-weight: 600;
@@ -265,7 +295,7 @@
 }
 
 .drs-active {
-  color: #00ff88;
+  color: #ff0000;
   animation: pulse 1s infinite;
 }
 
@@ -307,10 +337,10 @@
 }
 
 .leaderboard-table::-webkit-scrollbar-thumb {
-  background: rgba(102, 126, 234, 0.5);
+  background: rgba(255, 0, 0, 0.5);
   border-radius: 4px;
 }
 
 .leaderboard-table::-webkit-scrollbar-thumb:hover {
-  background: rgba(102, 126, 234, 0.7);
+  background: rgba(255, 0, 0, 0.7);
 }

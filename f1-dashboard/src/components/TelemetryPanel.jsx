@@ -20,7 +20,7 @@ const TelemetryPanel = ({ selectedCar, cars = [] }) => {
       speed: car.speed || 0,
       throttle: (car.throttle || 0) * 100,
       brake: (car.brake || 0) * 100,
-      rpm: car.rpm || 0
+      wear: (car.wear || 0) * 100
     };
 
     setTelemetryData(prev => {
@@ -42,7 +42,7 @@ const TelemetryPanel = ({ selectedCar, cars = [] }) => {
   const car = cars.find(c => c.name === selectedCar);
   if (!car) return null;
 
-  const rpmPercentage = ((car.rpm || 0) / 15000) * 100;
+  const wearPercentage = (car.wear || 0) * 100;
   const speedPercentage = ((car.speed || 0) / 350) * 100;
 
   return (
@@ -61,21 +61,21 @@ const TelemetryPanel = ({ selectedCar, cars = [] }) => {
         {/* Gauges */}
         <div className="gauges-row">
           <div className="gauge-container">
-            <div className="gauge-label">RPM</div>
+            <div className="gauge-label">Tyre Wear</div>
             <div className="gauge-wrapper">
               <ResponsiveContainer width="100%" height={120}>
-                <LineChart data={[{ value: rpmPercentage }]}>
+                <LineChart data={[{ value: wearPercentage }]}>
                   <Line 
                     type="monotone" 
                     dataKey="value" 
-                    stroke={rpmPercentage > 80 ? '#ff4444' : '#00ff88'} 
+                    stroke={wearPercentage > 70 ? '#ff4444' : wearPercentage > 40 ? '#ffaa00' : '#44ff44'} 
                     strokeWidth={3}
                     dot={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
-              <div className="gauge-value">{Math.round(car.rpm || 0)}</div>
-              <div className="gauge-unit">RPM</div>
+              <div className="gauge-value">{Math.round(wearPercentage)}</div>
+              <div className="gauge-unit">%</div>
             </div>
           </div>
 
@@ -132,7 +132,7 @@ const TelemetryPanel = ({ selectedCar, cars = [] }) => {
           </div>
 
           <div className="chart-container">
-            <div className="chart-title">Throttle / Brake</div>
+            <div className="chart-title">Tyre Wear vs Time</div>
             <ResponsiveContainer width="100%" height={150}>
               <LineChart data={telemetryData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2a3f5f" />
@@ -143,14 +143,7 @@ const TelemetryPanel = ({ selectedCar, cars = [] }) => {
                 />
                 <Line 
                   type="monotone" 
-                  dataKey="throttle" 
-                  stroke="#00ff88" 
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="brake" 
+                  dataKey="wear" 
                   stroke="#ff4444" 
                   strokeWidth={2}
                   dot={false}

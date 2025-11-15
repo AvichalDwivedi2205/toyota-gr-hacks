@@ -50,8 +50,17 @@ const CarDetails = ({ car, isOpen, onClose }) => {
                   <div className="metric-item">
                     <Zap size={20} />
                     <div className="metric-content">
-                      <div className="metric-label">RPM</div>
-                      <div className="metric-value">{Math.round(car.rpm || 0)}</div>
+                      <div className="metric-label">Tyre Wear</div>
+                      <div className="metric-value">{Math.round((car.wear || 0) * 100)}%</div>
+                      <div className="metric-bar">
+                        <div 
+                          className="metric-bar-fill"
+                          style={{ 
+                            width: `${(car.wear || 0) * 100}%`,
+                            backgroundColor: car.wear > 0.7 ? '#ff4444' : car.wear > 0.4 ? '#ffaa00' : '#44ff44'
+                          }}
+                        ></div>
+                      </div>
                     </div>
                   </div>
                   <div className="metric-item">
@@ -99,7 +108,9 @@ const CarDetails = ({ car, isOpen, onClose }) => {
                       style={{ 
                         backgroundColor: car.tyre === 'SOFT' ? '#ff0000' : 
                                        car.tyre === 'MEDIUM' ? '#ffff00' : 
-                                       car.tyre === 'HARD' ? '#ffffff' : '#00ff00'
+                                       car.tyre === 'HARD' ? '#ffffff' :
+                                       car.tyre === 'INTERMEDIATE' ? '#00aaff' :
+                                       car.tyre === 'WET' ? '#00ff00' : '#999999'
                       }}
                     ></div>
                   </div>
@@ -174,6 +185,32 @@ const CarDetails = ({ car, isOpen, onClose }) => {
                       {car.on_pit ? 'YES' : 'NO'}
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* Pitstop History */}
+              <div className="details-section">
+                <h3>Pitstop History</h3>
+                <div className="pitstop-info">
+                  <div className="pitstop-count">
+                    <span className="info-label">Total Pitstops:</span>
+                    <span className="info-value">{car.pitstop_count || 0}</span>
+                  </div>
+                  {car.pitstop_history && car.pitstop_history.length > 0 && (
+                    <div className="pitstop-list">
+                      {car.pitstop_history.map((pitstop, index) => (
+                        <div key={index} className="pitstop-item">
+                          <span className="pitstop-lap">Lap {pitstop.lap}</span>
+                          <span className="pitstop-tyres">
+                            {pitstop.tyre} → {pitstop.new_tyre || 'N/A'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {(!car.pitstop_history || car.pitstop_history.length === 0) && (
+                    <div className="no-pitstops">No pitstops yet</div>
+                  )}
                 </div>
               </div>
             </div>
