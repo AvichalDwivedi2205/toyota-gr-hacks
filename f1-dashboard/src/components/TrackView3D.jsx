@@ -11,7 +11,7 @@ function Track3D({ trackData, followCar, cars }) {
   const kerbsRef = useRef();
   const barriersRef = useRef();
   
-  // Convert 2D track points to 3D spline
+  // Convert 2D track points to 3D spline using TubeGeometry
   const trackGeometry = useMemo(() => {
     if (!trackData || !trackData.points || trackData.points.length === 0) {
       return null;
@@ -25,7 +25,8 @@ function Track3D({ trackData, followCar, cars }) {
       const x = p[0];
       const z = p[1]; // 2D y becomes 3D z
       // Add elevation based on position (simulate hills and dips)
-      const y = Math.sin(i * 0.1) * 2 + Math.cos(i * 0.05) * 3;
+      // Keep all elevation positive to stay above ground
+      const y = Math.abs(Math.sin(i * 0.1) * 2) + Math.abs(Math.cos(i * 0.05) * 1.5) + 0.5;
       return new THREE.Vector3(x, y, z);
     });
     
@@ -33,82 +34,152 @@ function Track3D({ trackData, followCar, cars }) {
     const closedPoints = [...threePoints, threePoints[0]];
     const curve = new THREE.CatmullRomCurve3(closedPoints, true);
     
-    // Extrude track along the curve
+    // Create a flat ribbon geometry for the track using custom geometry
+    const segments = 200; // Number of segments along the curve
     const trackWidth = 12; // F1 track width in meters
-    const shape = new THREE.Shape();
-    shape.moveTo(-trackWidth / 2, 0);
-    shape.lineTo(trackWidth / 2, 0);
-    shape.lineTo(trackWidth / 2, 0.1);
-    shape.lineTo(-trackWidth / 2, 0.1);
-    shape.lineTo(-trackWidth / 2, 0);
     
-    const extrudeSettings = {
-      steps: 100,
-      bevelEnabled: false,
-      extrudePath: curve,
-    };
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    const indices = [];
+    const normals = [];
+    const uvs = [];
     
-    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    // Generate vertices along the curve
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const point = curve.getPointAt(t);
+      const tangent = curve.getTangentAt(t).normalize();
+      
+      // Calculate perpendicular vector (binormal) for track width
+      // Use a consistent up vector to prevent twisting
+      const up = new THREE.Vector3(0, 1, 0);
+      const binormal = new THREE.Vector3().crossVectors(up, tangent).normalize();
+      
+      // Create left and right edge points
+      const left = point.clone().add(binormal.clone().multiplyScalar(trackWidth / 2));
+      const right = point.clone().add(binormal.clone().multiplyScalar(-trackWidth / 2));
+      
+      vertices.push(left.x, left.y, left.z);
+      vertices.push(right.x, right.y, right.z);
+      
+      // Calculate normals (pointing up)
+      normals.push(0, 1, 0);
+      normals.push(0, 1, 0);
+      
+      // UVs for texture mapping
+      uvs.push(0, t);
+      uvs.push(1, t);
+      
+      // Create triangles (except for last iteration)
+      if (i < segments) {
+        const base = i * 2;
+        // First triangle
+        indices.push(base, base + 1, base + 2);
+        // Second triangle
+        indices.push(base + 1, base + 3, base + 2);
+      }
+    }
+    
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setIndex(indices);
+    
     return geometry;
   }, [trackData]);
   
-  // Create kerbs geometries (one for each side)
+  // Create kerbs geometries (one for each side) using ribbon geometry
   const kerbsGeometries = useMemo(() => {
     if (!trackData || !trackData.points || trackData.points.length === 0) {
       return [];
     }
     
     const points = trackData.points;
-    const kerbWidth = 0.3;
+    const kerbWidth = 0.5;
     const kerbHeight = 0.15;
+    const segments = 200;
+    
+    // Create 3D points for track center curve
+    const threePoints = points.map((p, i) => {
+      const x = p[0];
+      const z = p[1];
+      // Keep all elevation positive to stay above ground
+      const y = Math.abs(Math.sin(i * 0.1) * 2) + Math.abs(Math.cos(i * 0.05) * 1.5) + 0.5;
+      return new THREE.Vector3(x, y, z);
+    });
+    
+    const closedPoints = [...threePoints, threePoints[0]];
+    const curve = new THREE.CatmullRomCurve3(closedPoints, true);
     
     const geometries = [];
     
     // Inner and outer kerbs
     for (let side = 0; side < 2; side++) {
-      const offset = side === 0 ? -6 : 6; // Offset from track center
-      const threePoints = points.map((p, i) => {
-        const x = p[0];
-        const z = p[1]; // 2D y becomes 3D z
-        const y = Math.sin(i * 0.1) * 2 + Math.cos(i * 0.05) * 3; // elevation
-        // Calculate perpendicular offset
-        const nextIdx = (i + 1) % points.length;
-        const dx = points[nextIdx][0] - p[0];
-        const dz = points[nextIdx][1] - p[1];
-        const len = Math.sqrt(dx * dx + dz * dz);
-        const perpX = -dz / len * offset;
-        const perpZ = dx / len * offset;
-        return new THREE.Vector3(x + perpX, y, z + perpZ);
-      });
+      const offset = side === 0 ? -6.5 : 6.5; // Offset from track center
       
-      const closedPoints = [...threePoints, threePoints[0]];
-      const curve = new THREE.CatmullRomCurve3(closedPoints, true);
+      const geometry = new THREE.BufferGeometry();
+      const vertices = [];
+      const indices = [];
+      const normals = [];
+      const uvs = [];
       
-      const shape = new THREE.Shape();
-      shape.moveTo(-kerbWidth / 2, 0);
-      shape.lineTo(kerbWidth / 2, 0);
-      shape.lineTo(kerbWidth / 2, kerbHeight);
-      shape.lineTo(-kerbWidth / 2, kerbHeight);
-      shape.lineTo(-kerbWidth / 2, 0);
+      // Generate vertices along the curve
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const point = curve.getPointAt(t);
+        const tangent = curve.getTangentAt(t).normalize();
+        
+        // Calculate perpendicular vector
+        const up = new THREE.Vector3(0, 1, 0);
+        const binormal = new THREE.Vector3().crossVectors(up, tangent).normalize();
+        
+        // Offset point to kerb position
+        const kerbCenter = point.clone().add(binormal.clone().multiplyScalar(offset));
+        
+        // Create inner and outer edge points for kerb width
+        const inner = kerbCenter.clone().add(binormal.clone().multiplyScalar(-kerbWidth / 2));
+        const outer = kerbCenter.clone().add(binormal.clone().multiplyScalar(kerbWidth / 2));
+        
+        // Raise kerb slightly above track
+        inner.y += kerbHeight;
+        outer.y += kerbHeight;
+        
+        vertices.push(inner.x, inner.y, inner.z);
+        vertices.push(outer.x, outer.y, outer.z);
+        
+        // Normals pointing up
+        normals.push(0, 1, 0);
+        normals.push(0, 1, 0);
+        
+        // UVs for striped texture
+        uvs.push(0, t * 20); // Multiply for repeating stripes
+        uvs.push(1, t * 20);
+        
+        // Create triangles
+        if (i < segments) {
+          const base = i * 2;
+          indices.push(base, base + 1, base + 2);
+          indices.push(base + 1, base + 3, base + 2);
+        }
+      }
       
-      const extrudeSettings = {
-        steps: 100,
-        bevelEnabled: false,
-        extrudePath: curve,
-      };
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      geometry.setIndex(indices);
       
-      geometries.push(new THREE.ExtrudeGeometry(shape, extrudeSettings));
+      geometries.push(geometry);
     }
     
     return geometries;
   }, [trackData]);
   
-  // Track material - brighter for visibility
+  // Track material - realistic asphalt
   const trackMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: '#4a4a4a',
-      roughness: 0.8,
-      metalness: 0.1,
+      color: '#2a2a2a',
+      roughness: 0.9,
+      metalness: 0.0,
       side: THREE.DoubleSide,
     });
   }, []);
@@ -116,8 +187,18 @@ function Track3D({ trackData, followCar, cars }) {
   // Kerbs material (red/white stripes)
   const kerbsMaterial = useMemo(() => {
     return new THREE.MeshStandardMaterial({
-      color: '#ff4444',
-      roughness: 0.7,
+      color: '#e31b23',
+      roughness: 0.6,
+      metalness: 0.0,
+    });
+  }, []);
+  
+  // Grass material for surrounding area
+  const grassMaterial = useMemo(() => {
+    return new THREE.MeshStandardMaterial({
+      color: '#2a5020',
+      roughness: 1.0,
+      metalness: 0.0,
     });
   }, []);
   
@@ -125,18 +206,24 @@ function Track3D({ trackData, followCar, cars }) {
     <>
       {/* Track surface */}
       {trackGeometry && (
-        <mesh ref={trackMeshRef} geometry={trackGeometry} material={trackMaterial} />
+        <mesh ref={trackMeshRef} geometry={trackGeometry} material={trackMaterial} castShadow receiveShadow />
       )}
       
       {/* Kerbs - render each side separately */}
       {kerbsGeometries.map((geometry, idx) => (
-        <mesh key={idx} geometry={geometry} material={kerbsMaterial} />
+        <mesh key={idx} geometry={geometry} material={kerbsMaterial} castShadow receiveShadow />
       ))}
       
-      {/* Ground plane */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
+      {/* Ground plane - grass */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
         <planeGeometry args={[5000, 5000]} />
-        <meshStandardMaterial color="#1a1f3a" />
+        <meshStandardMaterial color="#2a5020" roughness={1.0} />
+      </mesh>
+      
+      {/* Sky dome */}
+      <mesh>
+        <sphereGeometry args={[2500, 32, 32]} />
+        <meshBasicMaterial color="#87CEEB" side={THREE.BackSide} />
       </mesh>
     </>
   );
@@ -193,9 +280,14 @@ function CameraController({ followCar, cars, isFollowing, trackCenter }) {
         ref={controlsRef}
         enablePan={true}
         enableZoom={true}
-        minDistance={50}
-        maxDistance={2000}
-        maxPolarAngle={Math.PI / 1.8}
+        enableDamping={true}
+        dampingFactor={0.08}
+        rotateSpeed={0.5}
+        zoomSpeed={0.8}
+        minDistance={40}
+        maxDistance={2500}
+        maxPolarAngle={Math.PI / 2.05}
+        minPolarAngle={Math.PI / 8}
         target={trackCenter ? [trackCenter[0], 0, trackCenter[1]] : [0, 0, 0]}
       />
     </>
@@ -204,6 +296,7 @@ function CameraController({ followCar, cars, isFollowing, trackCenter }) {
 
 const TrackView3D = ({ trackData, cars = [], followCar, onCarClick }) => {
   const [isFollowing, setIsFollowing] = useState(!!followCar);
+  const [showLabels, setShowLabels] = useState(false);
   
   React.useEffect(() => {
     setIsFollowing(!!followCar);
@@ -236,31 +329,87 @@ const TrackView3D = ({ trackData, cars = [], followCar, onCarClick }) => {
   // Calculate camera distance based on track size
   const cameraDistance = useMemo(() => {
     const maxSize = Math.max(trackBounds.size[0], trackBounds.size[1]);
-    return Math.max(maxSize * 0.8, 200);
+    return Math.max(maxSize * 0.55, 150);
   }, [trackBounds]);
+  
+  // Better initial camera position - TV broadcast style angle
+  const initialCameraPosition = useMemo(() => {
+    // Position camera at a 35-45 degree angle for dramatic view
+    const horizontalDistance = cameraDistance * 0.7;
+    const height = cameraDistance * 0.35;
+    const angle = Math.PI / 4; // 45 degrees
+    
+    return [
+      trackBounds.center[0] + Math.cos(angle) * horizontalDistance,
+      height,
+      trackBounds.center[1] + Math.sin(angle) * horizontalDistance
+    ];
+  }, [trackBounds, cameraDistance]);
   
   return (
     <div className="track-view-3d">
+      {/* Toggle button for car labels */}
+      <button 
+        className="labels-toggle-btn"
+        onClick={() => setShowLabels(!showLabels)}
+        title={showLabels ? "Hide car labels" : "Show car labels"}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 7h18M3 12h18M3 17h18" />
+          {!showLabels && <line x1="3" y1="3" x2="21" y2="21" strokeWidth="2" />}
+        </svg>
+        {showLabels ? 'Hide Labels' : 'Show Labels'}
+      </button>
       <Canvas
-        gl={{ antialias: true, alpha: false }}
+        shadows
+        gl={{ 
+          antialias: true, 
+          alpha: false,
+          powerPreference: "high-performance",
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.2
+        }}
         camera={{ 
-          position: [
-            trackBounds.center[0], 
-            cameraDistance * 0.5, 
-            trackBounds.center[1] + cameraDistance
-          ], 
-          fov: 50 
+          position: initialCameraPosition,
+          fov: 65,
+          near: 0.1,
+          far: 5000
         }}
         style={{ width: '100%', height: '100%' }}
       >
-        {/* Lighting - increased intensity */}
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[trackBounds.center[0] + 200, 200, trackBounds.center[1] + 200]} intensity={1.2} castShadow />
-        <directionalLight position={[trackBounds.center[0] - 200, 100, trackBounds.center[1] - 200]} intensity={0.5} />
-        <pointLight position={[trackBounds.center[0], 100, trackBounds.center[1]]} intensity={0.5} />
+        {/* Realistic lighting setup */}
+        <ambientLight intensity={0.4} />
         
-        {/* Environment for better lighting */}
-        <Environment preset="sunset" />
+        {/* Main sun light */}
+        <directionalLight 
+          position={[trackBounds.center[0] + 400, 300, trackBounds.center[1] + 300]} 
+          intensity={1.5}
+          castShadow
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-camera-far={1000}
+          shadow-camera-left={-500}
+          shadow-camera-right={500}
+          shadow-camera-top={500}
+          shadow-camera-bottom={-500}
+          shadow-bias={-0.0001}
+        />
+        
+        {/* Fill light */}
+        <directionalLight 
+          position={[trackBounds.center[0] - 300, 150, trackBounds.center[1] - 200]} 
+          intensity={0.3}
+        />
+        
+        {/* Hemisphere light for sky/ground ambient */}
+        <hemisphereLight
+          color="#ffffff"
+          groundColor="#444444"
+          intensity={0.5}
+        />
+        
+        {/* Environment for realistic reflections */}
+        <Environment preset="city" background={false} />
         
         {/* Camera and controls */}
         <CameraController 
@@ -270,8 +419,11 @@ const TrackView3D = ({ trackData, cars = [], followCar, onCarClick }) => {
           trackCenter={trackBounds.center}
         />
         
-        {/* Helper grid for debugging */}
-        <gridHelper args={[Math.max(trackBounds.size[0], trackBounds.size[1]) * 1.5, 20, '#444444', '#222222']} position={[trackBounds.center[0], 0, trackBounds.center[1]]} />
+        {/* Subtle grid helper */}
+        <gridHelper 
+          args={[Math.max(trackBounds.size[0], trackBounds.size[1]) * 1.5, 30, '#333333', '#222222']} 
+          position={[trackBounds.center[0], -0.4, trackBounds.center[1]]} 
+        />
         
         {/* Track */}
         {trackData && trackData.points && trackData.points.length > 0 && (
@@ -286,6 +438,8 @@ const TrackView3D = ({ trackData, cars = [], followCar, onCarClick }) => {
                 key={car.name || idx}
                 car={car}
                 isSelected={followCar === car.name}
+                showLabel={showLabels}
+                trackData={trackData}
               />
             )
           ))}

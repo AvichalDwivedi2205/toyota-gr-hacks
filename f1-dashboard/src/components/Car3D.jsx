@@ -11,7 +11,35 @@ const carModels = [
   '/f1_2021_haas_vf21/scene.gltf'
 ];
 
-function Car3D({ car, isSelected }) {
+// Helper function to calculate track elevation at a given car position
+// This should match the elevation calculation in TrackView3D
+function calculateElevation(x, z, trackData) {
+  if (!trackData || !trackData.points || trackData.points.length === 0) {
+    return 0.5; // Default elevation
+  }
+  
+  // Find the closest point on the track to interpolate elevation
+  const points = trackData.points;
+  let minDist = Infinity;
+  let closestIndex = 0;
+  
+  for (let i = 0; i < points.length; i++) {
+    const dx = points[i][0] - x;
+    const dz = points[i][1] - z;
+    const dist = dx * dx + dz * dz;
+    if (dist < minDist) {
+      minDist = dist;
+      closestIndex = i;
+    }
+  }
+  
+  // Use the same elevation formula as in TrackView3D
+  const i = closestIndex;
+  const y = Math.abs(Math.sin(i * 0.1) * 2) + Math.abs(Math.cos(i * 0.05) * 1.5) + 0.5;
+  return y;
+}
+
+function Car3D({ car, isSelected, showLabel = false, trackData }) {
   const groupRef = useRef();
   
   // Distribute cars across all available models based on car name hash
@@ -50,22 +78,32 @@ function Car3D({ car, isSelected }) {
     return cloned;
   }, [scene, modelPath]);
   
-  // Apply car color to materials
+  // Apply car color to materials and enable shadows
   React.useEffect(() => {
     if (clonedScene) {
       clonedScene.traverse((child) => {
-        if (child.isMesh && child.material) {
-          // Create a new material with the car color
-          const color = new THREE.Color(car.color || '#ffffff');
-          if (Array.isArray(child.material)) {
-            child.material = child.material.map(mat => {
-              const newMat = mat.clone();
-              newMat.color = color;
-              return newMat;
-            });
-          } else {
-            child.material = child.material.clone();
-            child.material.color = color;
+        if (child.isMesh) {
+          // Enable shadows
+          child.castShadow = true;
+          child.receiveShadow = true;
+          
+          // Apply car color
+          if (child.material) {
+            const color = new THREE.Color(car.color || '#ffffff');
+            if (Array.isArray(child.material)) {
+              child.material = child.material.map(mat => {
+                const newMat = mat.clone();
+                newMat.color = color;
+                newMat.metalness = 0.3;
+                newMat.roughness = 0.4;
+                return newMat;
+              });
+            } else {
+              child.material = child.material.clone();
+              child.material.color = color;
+              child.material.metalness = 0.3;
+              child.material.roughness = 0.4;
+            }
           }
         }
       });
@@ -76,31 +114,77 @@ function Car3D({ car, isSelected }) {
   // Map 2D coordinates to 3D: car.x -> x, car.y -> z, elevation -> y
   const targetPosition = useRef(new THREE.Vector3(car.x, 0, car.y));
   const currentPosition = useRef(new THREE.Vector3(car.x, 0, car.y));
-  const targetRotation = useRef(0);
-  const currentRotation = useRef(0);
+  const previousPosition = useRef(new THREE.Vector3(car.x, 0, car.y));
+  const targetRotation = useRef(car.angle || 0);
+  const currentRotation = useRef(car.angle || 0);
+  const isInitialized = useRef(false);
   
   useFrame((state, delta) => {
     if (!groupRef.current) return;
     
-    // Update target position (2D x,y -> 3D x,z with y as elevation)
-    targetPosition.current.set(car.x, 0, car.y);
-    // car.angle is from atan2(dy, dx) which gives direction in 2D (x,y) plane
-    // In 3D, we map (x,y) -> (x,z), so angle needs to be applied to Y rotation
-    // atan2 gives: 0 = +x, π/2 = +y, π = -x, -π/2 = -y
-    // In 3D: 0 = +x, π/2 = +z, π = -x, -π/2 = -z
-    // Car models are oriented 90 degrees off, so add π/2 to correct the direction
-    targetRotation.current = (car.angle || 0) + Math.PI / 2;
+    // Store previous position before updating
+    previousPosition.current.copy(targetPosition.current);
     
-    // Smooth interpolation
-    currentPosition.current.lerp(targetPosition.current, 0.1);
+    // Calculate elevation at car position to match track
+    const elevation = calculateElevation(car.x, car.y, trackData);
+    
+    // Add offset to place car above the track surface (not inside it)
+    const carHeightOffset = 0.8; // Half the height of a typical F1 car
+    
+    // Update target position (2D x,y -> 3D x,z with y as elevation)
+    targetPosition.current.set(car.x, elevation + carHeightOffset, car.y);
+    
+    // Calculate rotation based on actual movement direction in 3D
+    // This ensures the car faces where it's actually moving
+    const deltaX = targetPosition.current.x - previousPosition.current.x;
+    const deltaZ = targetPosition.current.z - previousPosition.current.z;
+    const movementDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+    
+    // Use car.angle as the primary source of truth for direction
+    // Only calculate from movement if angle isn't provided or as fallback
+    if (car.angle !== undefined && car.angle !== null) {
+      // Convert car.angle (from server) to Three.js rotation
+      // Server angle is typically in standard math convention (0 = right, counterclockwise positive)
+      // Three.js Y rotation: 0 = forward along +Z, counterclockwise positive
+      // Adjust as needed: add -PI/2 to convert from 0=right to 0=forward
+      targetRotation.current = -car.angle + Math.PI / 2;
+    } else if (movementDistance > 0.01) {
+      // Fallback: calculate angle from movement vector in 3D space
+      // atan2(deltaZ, deltaX) gives us the angle of movement
+      // Adjust to make car face forward in the direction of movement
+      targetRotation.current = Math.atan2(deltaZ, deltaX) + Math.PI / 2;
+    }
+    
+    // Initialize rotation on first frame to prevent spinning from 0
+    if (!isInitialized.current) {
+      currentRotation.current = targetRotation.current;
+      currentPosition.current.copy(targetPosition.current);
+      isInitialized.current = true;
+    }
+    
+    // Calculate speed-adaptive interpolation factor
+    // Distance between current and target position
+    const distance = currentPosition.current.distanceTo(targetPosition.current);
+    // Base interpolation factor, increases with distance (speed)
+    // At low speeds (small distance): slower interpolation for smoothness
+    // At high speeds (large distance): faster interpolation to prevent lag
+    const baseInterpolation = 0.2;
+    const speedFactor = Math.min(distance / 10, 1.5); // Cap at 1.5x
+    const positionLerpFactor = Math.min(baseInterpolation + speedFactor * 0.15, 0.6);
+    
+    // Smooth interpolation with speed-adaptive factor
+    currentPosition.current.lerp(targetPosition.current, positionLerpFactor);
+    
+    // Handle rotation interpolation with wrap-around
     const angleDiff = targetRotation.current - currentRotation.current;
     // Normalize angle difference to [-PI, PI] for shortest rotation
     let normalizedDiff = ((angleDiff + Math.PI) % (2 * Math.PI)) - Math.PI;
-    currentRotation.current += normalizedDiff * 0.1;
+    // Use adaptive rotation speed based on turn sharpness
+    const rotationSpeed = movementDistance > 0.01 ? Math.min(0.4, Math.abs(normalizedDiff) * 2) : 0.2;
+    currentRotation.current += normalizedDiff * rotationSpeed;
     
     // Apply position and rotation
     groupRef.current.position.copy(currentPosition.current);
-    // Apply the rotation - car.angle is already the correct direction
     groupRef.current.rotation.y = currentRotation.current;
     
     // Scale based on selection
@@ -110,10 +194,12 @@ function Car3D({ car, isSelected }) {
   
   // If model failed to load, show placeholder
   if (!clonedScene) {
+    const placeholderElevation = calculateElevation(car.x, car.y, trackData);
+    const carHeightOffset = 0.8;
     return (
-      <group ref={groupRef} position={[car.x, 0, car.y]}>
+      <group ref={groupRef} position={[car.x, placeholderElevation + carHeightOffset, car.y]}>
         <mesh>
-          <boxGeometry args={[5, 1.5, 2]} />
+          <boxGeometry args={[5 * 2.5, 1.5 * 2.5, 2 * 2.5]} />
           <meshStandardMaterial color={car.color || '#ff0000'} />
         </mesh>
         {car.position !== undefined && (
@@ -139,8 +225,8 @@ function Car3D({ car, isSelected }) {
     const box = new THREE.Box3().setFromObject(clonedScene);
     box.expandByObject(clonedScene);
     const size = box.getSize(new THREE.Vector3());
-    // F1 car is ~5.5m long, scale model to match
-    const targetLength = 5.5;
+    // F1 car is ~5.5m long, scale model to match, then make it 2.5x bigger for better visibility
+    const targetLength = 5.5 * 2.5; // Make cars 2.5x bigger
     const maxDimension = Math.max(Math.abs(size.x), Math.abs(size.y), Math.abs(size.z));
     console.log(`Car ${car.name} - Model dimensions:`, size, 'Max:', maxDimension, 'Calculated scale:', maxDimension > 0 ? targetLength / maxDimension : 1);
     if (maxDimension > 0 && maxDimension < 1000) { // Sanity check
@@ -148,21 +234,23 @@ function Car3D({ car, isSelected }) {
       return scale;
     }
     // If model seems wrong size, use default
-    return 1;
+    return 4.5; // Default scale multiplier
   }, [clonedScene, car.name]);
   
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} castShadow receiveShadow>
       <primitive 
         object={clonedScene} 
         scale={autoScale}
+        castShadow
+        receiveShadow
         // No initial rotation - let the car.angle control the direction
         // If models face wrong direction by default, adjust this
         rotation={[0, 0, 0]}
       />
       
-      {/* Position label */}
-      {car.position !== undefined && (
+      {/* Position label - only show if enabled */}
+      {showLabel && car.position !== undefined && (
         <Html
           position={[0, 3, 0]}
           center
