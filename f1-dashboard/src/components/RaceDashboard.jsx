@@ -331,10 +331,6 @@ const RaceDashboard = ({
                   <div className="driver-header-right">
                     <div className="driver-stats-mini">
                       <div className="mini-stat">
-                        <span className="mini-stat-label">Time</span>
-                        <span className="mini-stat-value">{formatTime(driver.total_time)}</span>
-                      </div>
-                      <div className="mini-stat">
                         <span className="mini-stat-label">Pitstops</span>
                         <span className="mini-stat-value">{driver.pitstops}</span>
                       </div>
