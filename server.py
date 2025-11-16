@@ -215,6 +215,12 @@ class CarState:
         self.error_active = False
         self.error_timer = 0.0
         self.error_speed_multiplier = 1.0
+        
+        # Gap/interval tracking (initialized, will be calculated in get_state)
+        self.time_interval = 0.0
+        self.distance_interval = 0.0
+        self.gap_ahead = 0.0
+        self.distance_gap_ahead = 0.0
 
     def to_dict(self, track):
         u = track['s_to_u'](self.s)
@@ -252,8 +258,10 @@ class CarState:
             'aero_downforce': round(getattr(self, 'aero_downforce', 0.0), 0),
             'pitstop_history': getattr(self, 'pitstop_history', []),
             'pitstop_count': getattr(self, 'pitstop_count', 0),
-            'time_interval': round(getattr(self, 'time_interval', 0.0), 2),
+            'time_interval': round(getattr(self, 'time_interval', 0.0), 3),
             'distance_interval': round(getattr(self, 'distance_interval', 0.0), 1),
+            'gap_ahead': round(getattr(self, 'gap_ahead', 0.0), 3),
+            'distance_gap_ahead': round(getattr(self, 'distance_gap_ahead', 0.0), 1),
             'undercut_summary': self._get_undercut_summary()
         }
     
@@ -1116,17 +1124,32 @@ class RaceSim:
         """Get complete race state for WebSocket broadcast"""
         sorted_cars = self.get_leaderboard()
         
-        # Calculate intervals (gaps from leader)
+        # Calculate intervals (gaps from leader and car ahead)
         leader = sorted_cars[0] if sorted_cars else None
         if leader:
-            for car in sorted_cars:
-                # Time interval
-                car.time_interval = car.total_time - leader.total_time
-                # Distance interval (accounting for lap differences)
+            for i, car in enumerate(sorted_cars):
+                # Time interval from leader
+                car.time_interval = max(0.0, car.total_time - leader.total_time)
+                
+                # Distance interval from leader (accounting for lap differences)
                 track_length = self.track['total_length']
                 lap_diff = car.laps_completed - leader.laps_completed
                 distance_interval = (lap_diff * track_length) + (car.s - leader.s)
                 car.distance_interval = distance_interval
+                
+                # Calculate gap to car ahead (for better display)
+                if i > 0:
+                    car_ahead = sorted_cars[i - 1]
+                    # Time gap to car ahead
+                    car.gap_ahead = max(0.0, car.total_time - car_ahead.total_time)
+                    # Distance gap to car ahead
+                    lap_diff_ahead = car.laps_completed - car_ahead.laps_completed
+                    distance_gap_ahead = (lap_diff_ahead * track_length) + (car_ahead.s - car.s)
+                    car.distance_gap_ahead = distance_gap_ahead
+                else:
+                    # Leader has no car ahead
+                    car.gap_ahead = 0.0
+                    car.distance_gap_ahead = 0.0
         
         tyre_counts = {}
         for c in self.cars:

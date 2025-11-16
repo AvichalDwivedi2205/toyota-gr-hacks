@@ -147,9 +147,33 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
 
   const calculateGapToLeader = (car, leader) => {
     if (!leader || car.position === 1) return '--';
-    // Use time_interval if available, otherwise calculate from total_time
-    const gap = car.time_interval !== undefined ? car.time_interval.toFixed(1) : (car.total_time - leader.total_time).toFixed(1);
-    return `+${gap}s`;
+    
+    // Prefer gap_ahead (gap to car directly ahead) for better readability
+    // Fall back to time_interval (gap to leader) if gap_ahead not available
+    let gap;
+    if (car.gap_ahead !== undefined && car.gap_ahead !== null && !isNaN(car.gap_ahead)) {
+      gap = car.gap_ahead;
+    } else if (car.time_interval !== undefined && car.time_interval !== null && !isNaN(car.time_interval)) {
+      gap = car.time_interval;
+    } else if (car.total_time !== undefined && leader.total_time !== undefined) {
+      gap = car.total_time - leader.total_time;
+    } else {
+      return '--';
+    }
+    
+    // Ensure gap is always positive
+    gap = Math.max(0, gap);
+    
+    // Format based on size: show more precision for small gaps
+    if (gap < 0.01) {
+      return '<0.01s';
+    } else if (gap < 1.0) {
+      return `+${gap.toFixed(2)}s`;
+    } else if (gap < 10.0) {
+      return `+${gap.toFixed(1)}s`;
+    } else {
+      return `+${gap.toFixed(1)}s`;
+    }
   };
 
   const leader = sortedCars.find(c => c.position === 1);
