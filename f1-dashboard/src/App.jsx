@@ -17,7 +17,20 @@ import SimulationControls from './components/SimulationControls';
 import { pageLoadReveal, speedLines } from './utils/animations';
 import './App.css';
 
-const WS_URL = 'ws://localhost:8000/ws';
+// Use environment variable for backend URL, fallback to localhost for development
+const getBackendUrl = () => {
+  // Vite uses VITE_ prefix for environment variables
+  return import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+};
+
+const getWebSocketUrl = () => {
+  const backendUrl = getBackendUrl();
+  // Convert HTTP/HTTPS URL to WebSocket URL
+  return backendUrl.replace('http://', 'ws://').replace('https://', 'wss://') + '/ws';
+};
+
+const WS_URL = getWebSocketUrl();
+const BACKEND_URL = getBackendUrl();
 
 function App() {
   const { 
@@ -95,7 +108,7 @@ function App() {
     if (raceState.race_finished && !showRaceDashboard) {
       const fetchInsights = async () => {
         try {
-          const response = await fetch('http://localhost:8000/api/race-insights');
+          const response = await fetch(`${BACKEND_URL}/api/race-insights`);
           if (response.ok) {
             const data = await response.json();
             setRaceInsights(data.insights || {});
@@ -185,7 +198,7 @@ function App() {
     if (raceStarted && !raceState.race_finished) {
       setLoading(true);
       try {
-        const response = await fetch('http://localhost:8000/api/pause', {
+        const response = await fetch(`${BACKEND_URL}/api/pause`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -221,7 +234,7 @@ function App() {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/start', {
+      const response = await fetch(`${BACKEND_URL}/api/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

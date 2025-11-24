@@ -3,6 +3,13 @@ import { motion } from 'framer-motion';
 import { Award, TrendingUp, AlertCircle, CheckCircle, RotateCcw, ArrowLeft, Trophy, Zap, Loader2 } from 'lucide-react';
 import './RaceDashboard.css';
 
+// Get backend URL from environment variable
+const getBackendUrl = () => {
+  return import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+};
+
+const BACKEND_URL = getBackendUrl();
+
 const RaceDashboard = ({ 
   insights = {}, 
   undercutSummary = [], 
@@ -25,7 +32,7 @@ const RaceDashboard = ({
     const fetchOptimalStrategy = async () => {
       setLoadingStrategy(true);
       try {
-        const response = await fetch('http://localhost:8000/api/optimal-pit-strategy');
+        const response = await fetch(`${BACKEND_URL}/api/optimal-pit-strategy`);
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.strategy) {
@@ -47,7 +54,7 @@ const RaceDashboard = ({
     
     try {
       const response = await fetch(
-        `http://localhost:8000/api/driver-insight/${encodeURIComponent(driverName)}`,
+        `${BACKEND_URL}/api/driver-insight/${encodeURIComponent(driverName)}`,
         { method: 'POST' }
       );
       

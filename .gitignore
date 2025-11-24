@@ -57,3 +57,5 @@ dist-ssr/
 # Logs
 logs/
 *.log
+DEPLOYMENT.md
+QUICK_DEPLOY.md
