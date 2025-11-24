@@ -46,4 +46,3 @@ uvloop==0.22.1
 watchfiles==1.1.1
 websockets==14.1
 matplotlib==3.10.7
-fastf1==3.1.8
