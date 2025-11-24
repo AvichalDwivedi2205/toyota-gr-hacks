@@ -163,7 +163,9 @@ class CarState:
         self.aggression = aggression
         self.tyre = 'MEDIUM'
         self.wear = 0.0
-        self.fuel = 100.0
+        self.fuel_capacity = 110.0  # 110L for GT3
+        self.fuel = self.fuel_capacity
+        self.refuel_rate = 3.0  # 3.0 L/sec
         self.laptime = 0.0
         self.total_time = 0.0
         self.laps_completed = 0
@@ -189,7 +191,8 @@ class CarState:
         self.ers_energy = 100.0
         
         # Car parameters
-        self.mass = 798.0
+        self.base_mass = 1250.0  # GT3 base mass
+        # Mass will be calculated dynamically based on fuel
         self.power_max = 746000.0
         self.brake_bias = 0.6
         self.suspension_stiffness = 50000.0
@@ -424,7 +427,13 @@ class RaceSim:
         k = 12.0
         curv = max(curvature, 1e-6)
         v = math.sqrt(grip * k / curv)
-        v *= (1 - 0.001 * car.fuel)
+        v = math.sqrt(grip * k / curv)
+        
+        # Mass penalty for cornering: F_c = mv^2/r -> v = sqrt(F_c * r / m)
+        # Heavier car = lower cornering speed for same grip force
+        current_mass = car.base_mass + car.fuel * 0.75
+        mass_ratio = car.base_mass / current_mass
+        v *= math.sqrt(mass_ratio)
         # Wind speed penalty: higher wind makes cornering more difficult
         wind_speed = self.weather.get('wind', 0.0)
         wind_penalty_factor = 0.015  # ~1.5% reduction per m/s of wind
@@ -443,7 +452,24 @@ class RaceSim:
         base *= (0.90 + 0.15 * tyre_speed_multiplier)  # Makes difference more noticeable
         # Also factor in grip coefficient for wear effects
         base *= (0.95 + 0.1 * self.tyre_grip_coeff(car))
-        base *= (1 - 0.001 * car.fuel)
+        # Also factor in grip coefficient for wear effects
+        base *= (0.95 + 0.1 * self.tyre_grip_coeff(car))
+        
+        # Mass penalty: Heavier car = slower acceleration
+        # 0.04s per lap per kg is a bit complex to map directly to speed, 
+        # so we'll use a physics-based approach: F = ma -> a = F/m
+        # Heavier mass = less acceleration. 
+        # We'll approximate this by scaling the base speed potential.
+        current_mass = car.base_mass + car.fuel * 0.75  # Fuel density approx 0.75 kg/L
+        mass_penalty = (current_mass / car.base_mass) ** 0.5 # Square root approximation for speed impact
+        # Invert so higher mass = lower multiplier. 
+        # If mass is 10% higher, speed is ~5% lower (simplified)
+        # Actually, let's use the user's rule of thumb: 0.03-0.05 sec per lap per litre.
+        # On a ~90s lap, 100L fuel = ~4s penalty = ~4.5% slower.
+        # 100L * 0.04s/L = 4s. 4s / 90s = 0.044.
+        # So 100L fuel should reduce speed by ~4.5%.
+        fuel_factor = 1.0 - (car.fuel / car.fuel_capacity) * 0.045
+        base *= fuel_factor
         # DRS speed boost: 10% increase when DRS is active
         if getattr(car, 'drs_active', False):
             base *= 1.10
@@ -488,8 +514,12 @@ class RaceSim:
         if laps_remaining <= 3:
             return 0.0
         
-        if car.wear < 0.8:
+        if car.wear < 0.8 and car.fuel > 10.0: # Don't pit if tires are good AND fuel is okay
             return 0.0
+        
+        # Force pit if fuel is critical (less than ~2 laps worth, approx 4-5L)
+        if car.fuel < 5.0:
+            return 1.0
         
         # Get current leaderboard for interval analysis
         sorted_cars = self.get_leaderboard()
@@ -774,9 +804,21 @@ class RaceSim:
             # Check for pitstop based on probability
             if not car.on_pit and random.random() < self.pitstop_probability(car) * self.dt:
                 car.on_pit = True
-                # Generate variable pitstop time
-                pit_time = get_pitstop_time()
+                # Calculate pit duration: max(tyre change, refueling)
+                tyre_time = get_pitstop_time()
+                
+                # Refueling time
+                fuel_needed = car.fuel_capacity - car.fuel
+                refuel_time = fuel_needed / car.refuel_rate
+                
+                # Total pit time is the longer of the two (usually refueling if empty)
+                pit_time = max(tyre_time, refuel_time)
+                
                 car.pit_counter = pit_time
+                
+                # Refuel immediately (conceptually happens during the stop)
+                # In reality, we might want to fill it gradually, but for sim simplicity:
+                car.fuel = car.fuel_capacity
                 # Record position before pitstop
                 sorted_cars = self.get_leaderboard()
                 car.position_before_pitstop = car.position
@@ -896,9 +938,15 @@ class RaceSim:
             dtemp = (heat_gen - cooling) * self.dt
             car.tire_temp = max(ambient_temp + 20, min(car.tire_temp + dtemp, 150.0))
             
-            car.fuel -= 0.02 * self.dt
+            # Fuel burn: ~2.5L per lap? 
+            # Lap length ~5km? Let's say 2.5L / lap.
+            # If lap time is ~90s, then burn rate is 2.5/90 L/s = ~0.028 L/s
+            # Let's increase burn rate slightly to make refueling matter more
+            car.fuel -= 0.035 * self.dt
             if car.fuel < 0:
                 car.fuel = 0
+                # If out of fuel, car stops or crawls
+                car.v = 0
 
             car.s += car.v * self.dt
 
@@ -1471,7 +1519,7 @@ class RaceSim:
             car.laps_completed = 0
             car.total_time = 0.0
             car.wear = 0.0
-            car.fuel = 100.0
+            car.fuel = car.fuel_capacity
             car.on_pit = False
             car.pit_counter = 0.0
             car.pitstop_history = []
