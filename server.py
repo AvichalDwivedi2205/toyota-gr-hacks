@@ -185,6 +185,7 @@ class CarState:
         self.yaw_rate = 0.0
         self.slip_angle = 0.0
         self.engine_mode = 'normal'
+        self.drs_active = False
         self.ers_energy = 100.0
         
         # Car parameters
@@ -250,6 +251,7 @@ class CarState:
             'throttle': round(getattr(self, 'throttle', 0.0), 2),
             'brake': round(getattr(self, 'brake_pressure', 0.0), 2),
             'tire_temp': round(getattr(self, 'tire_temp', 100.0), 1),
+            'drs_active': getattr(self, 'drs_active', False),
             'ers_energy': round(getattr(self, 'ers_energy', 100.0), 1),
             'controller_type': getattr(self, 'controller_type', 'pure_pursuit'),
             'overtaking': getattr(self, 'overtaking', False),
@@ -442,6 +444,9 @@ class RaceSim:
         # Also factor in grip coefficient for wear effects
         base *= (0.95 + 0.1 * self.tyre_grip_coeff(car))
         base *= (1 - 0.001 * car.fuel)
+        # DRS speed boost: 10% increase when DRS is active
+        if getattr(car, 'drs_active', False):
+            base *= 1.10
         return base
 
     def error_probability(self, car):
@@ -610,7 +615,7 @@ class RaceSim:
         if not self.race_started or self.paused:
             return
         
-        # Calculate leaderboard once per step
+        # Calculate leaderboard once per step for DRS detection
         sorted_cars = self.get_leaderboard()
         
         for car in self.cars:
@@ -649,6 +654,49 @@ class RaceSim:
             
             u = self.track['s_to_u'](car.s)
             curv = self.track['curv'](u)
+            
+            # DRS Detection and Activation (before speed calculations)
+            car.drs_active = False
+            # Find car position in leaderboard
+            car_position = next((i for i, c in enumerate(sorted_cars) if c == car), -1)
+            
+            # DRS rules: Active after 3 laps by leader, within 1s of car ahead AND leader, on designated straight only
+            leader = sorted_cars[0] if sorted_cars else None
+            if leader and leader.laps_completed >= 3 and car_position > 0:
+                track_length = self.track['total_length']
+                
+                # Define DRS zone: specific straight section (e.g., bottom straight from T8 to T9)
+                # Using track position normalized to 0-1, DRS zone is roughly 0.35-0.45 of track length
+                # This corresponds to the long bottom straight section
+                drs_zone_start = 0.35 * track_length
+                drs_zone_end = 0.45 * track_length
+                
+                # Check if car is in DRS zone (accounting for lap wrapping)
+                car_s_normalized = car.s % track_length
+                in_drs_zone = drs_zone_start <= car_s_normalized <= drs_zone_end
+                
+                if in_drs_zone:
+                    car_ahead = sorted_cars[car_position - 1]
+                    # Calculate time gap to car ahead (positive if car is behind)
+                    lap_diff = car.laps_completed - car_ahead.laps_completed
+                    distance_gap = (lap_diff * track_length) + (car_ahead.s - car.s)
+                    # Convert distance gap to time gap using current speed
+                    if car.v > 0.1:
+                        time_gap_ahead = distance_gap / car.v
+                    else:
+                        time_gap_ahead = 999.0  # Very large gap if car is stopped
+                    
+                    # Calculate time gap to leader
+                    leader_lap_diff = car.laps_completed - leader.laps_completed
+                    leader_distance_gap = (leader_lap_diff * track_length) + (leader.s - car.s)
+                    if car.v > 0.1:
+                        time_gap_leader = leader_distance_gap / car.v
+                    else:
+                        time_gap_leader = 999.0
+                    
+                    # DRS active if within 1 second of car ahead AND within 1 second of leader
+                    if 0 < time_gap_ahead <= 1.0 and 0 < time_gap_leader <= 1.0:
+                        car.drs_active = True
             
             # Apply defensive behavior: slower cars hold up faster ones
             defensive_speed_multiplier = 1.0
@@ -799,6 +847,9 @@ class RaceSim:
             # Tyre wear calculation with compound-specific rates
             base_wear_rate = 0.0005 * (1 + 0.8 * (1 - self.tyre_grip_coeff(car)))
             wear_rate_multiplier = TYRE_WEAR_RATES.get(car.tyre, 1.0)
+            # DRS wear penalty: 5% increase when DRS is active
+            if getattr(car, 'drs_active', False):
+                wear_rate_multiplier *= 1.05
             car.wear += base_wear_rate * wear_rate_multiplier * self.dt
             car.wear = min(car.wear, 0.99)
             
@@ -1856,3 +1907,4 @@ async def websocket_endpoint(websocket: WebSocket):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
