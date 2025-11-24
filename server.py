@@ -36,7 +36,7 @@ TYRE_BASE = {
     'SOFT': 1.00,
     'MEDIUM': 0.95,
     'HARD': 0.90,
-    'INTERMEDIATE': 0.82,
+    'HARD': 0.90,
     'WET': 0.78,
 }
 
@@ -44,7 +44,7 @@ TYRE_WEAR_RATES = {
     'SOFT': 2.0,    # Wears fastest
     'MEDIUM': 1.0,  # Baseline
     'HARD': 0.5,    # Wears slowest
-    'INTERMEDIATE': 1.1,  # Slightly faster than medium
+    'HARD': 0.5,    # Wears slowest
     'WET': 1.2      # Slightly faster than medium
 }
 
@@ -52,7 +52,7 @@ TYRE_HEAT_FACTORS = {
     'SOFT': 1.2,    # Generates more heat
     'MEDIUM': 1.0,  # Baseline
     'HARD': 0.8,    # Generates less heat
-    'INTERMEDIATE': 0.85,  # Less heat generation
+    'HARD': 0.8,    # Generates less heat
     'WET': 0.9      # Less heat generation
 }
 
@@ -412,8 +412,6 @@ class RaceSim:
         rain = self.weather['rain']
         if car.tyre == 'WET':
             grip *= (1.0 + 0.5 * rain)
-        elif car.tyre == 'INTERMEDIATE':
-            grip *= (1.0 + 0.3 * rain) if rain > 0.3 else (1.0 - 0.5 * rain)
         else:
             grip *= (1.0 - 0.9 * rain)
         # Combine driver skill and car skill for grip handling
@@ -490,7 +488,7 @@ class RaceSim:
         
         # Reduce rain factor for wet/inters tyres (they provide better grip in rain)
         # Dry tyres (SOFT/MEDIUM/HARD) keep full rain impact
-        if car.tyre in ['WET', 'INTERMEDIATE']:
+        if car.tyre in ['WET']:
             rain_factor = 0.3 * rain  # Reduced rain impact for wet tyres
         else:
             rain_factor = 4 * rain  # Full rain impact for dry tyres
@@ -659,11 +657,9 @@ class RaceSim:
                     laps_remaining = self.total_laps - car.laps_completed
                     if rain > 0.6:
                         car.tyre = 'WET'
-                    elif rain > 0.3:
-                        car.tyre = 'INTERMEDIATE'
                     else:
                         # Prefer softer compounds when race is ending soon
-                        if laps_remaining < 5:
+                        if laps_remaining <= 6:
                             car.tyre = 'SOFT'  # Push for fastest lap times
                         elif laps_remaining < 10:
                             car.tyre = random.choice(['SOFT', 'MEDIUM'])  # Prefer softer
