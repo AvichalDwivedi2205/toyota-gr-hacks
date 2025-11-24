@@ -304,27 +304,79 @@ class RaceSim:
     def init_cars(self, n):
         # Driver data: (name, driver_skill, car_skill, color)
         driver_data = [
-            ('Max Verstappen', 0.99, 0.86, '#3671C6'),      # Red Bull
-            ('Lando Norris', 0.95, 0.90, '#FF8700'),        # McLaren
-            ('Oscar Piastri', 0.92, 0.90, '#FF8700'),       # McLaren
-            ('Fernando Alonso', 0.92, 0.78, '#00D4AB'),     # Aston Martin
-            ('Charles Leclerc', 0.91, 0.87, '#DC0000'),     # Ferrari
-            ('George Russell', 0.94, 0.87, '#00665E'),      # Mercedes
-            ('Carlos Sainz', 0.89, 0.82, '#DC0000'),        # Ferrari
-            ('Lewis Hamilton', 0.88, 0.87, '#006F62'),      # Mercedes
-            ('Alexander Albon', 0.85, 0.82, '#0090FF'),     # Williams
-            ('Oliver Bearman', 0.84, 0.88, '#E10600'),      # Haas
-            ('Isack Hadjar', 0.83, 0.82, '#66ccff'),        # RB
-            ('Nico Hulkenberg', 0.82, 0.77, '#66ff66'),     # Sauber
-            ('Kimi Antonelli', 0.81, 0.87, '#00665E'),      # Mercedes
-            ('Gabriel Bortoleto', 0.80, 0.77, '#66ff66'),   # Sauber
-            ('Esteban Ocon', 0.79, 0.82, '#00D4AB'),        # Aston Martin
-            ('Pierre Gasly', 0.78, 0.80, '#ff66cf'),        # Alpine
-            ('Yuki Tsunoda', 0.77, 0.84, '#3671C6'),        # Red Bull
-            ('Liam Lawson', 0.76, 0.85, '#66ccff'),         # RB
-            ('Franco Colapinto', 0.75, 0.80, '#ff66cf'),    # Alpine
-            ('Lance Stroll', 0.74, 0.78, '#00D4AB')         # Aston Martin
-        ]
+
+    # =========================
+    #       GTD PRO
+    # =========================
+
+    # Corvette Racing – Corvette Z06 GT3.R
+    ('Antonio Garcia',      0.95, 0.92, '#FFB600'),
+    ('Nicky Catsburg',      0.94, 0.92, '#FFB600'),
+    ('Tommy Milner',        0.92, 0.92, '#FFB600'),
+
+    # Pfaff Motorsports – Porsche 911 GT3 R
+    ('Laurens Vanthoor',    0.96, 0.89, '#D50032'),
+    ('Klaus Bachler',       0.93, 0.89, '#D50032'),
+
+    # Vasser Sullivan – Lexus RC F GT3
+    ('Ben Barnicoat',       0.94, 0.90, '#F6C12B'),
+    ('Mike Conway',         0.91, 0.90, '#F6C12B'),
+
+    # Proton Competition – Mercedes-AMG GT3
+    ('Maro Engel',          0.95, 0.91, '#C8C8C8'),
+    ('Luca Stolz',          0.92, 0.91, '#C8C8C8'),
+
+    # Risi Competizione – Ferrari 296 GT3
+    ('Davide Rigon',        0.95, 0.90, '#C3002F'),
+    ('Daniel Serra',        0.94, 0.90, '#C3002F'),
+
+
+    # =========================
+    #          GTD
+    # =========================
+
+    # Vasser Sullivan GTD – Lexus RC F GT3
+    ('Parker Thompson',     0.89, 0.88, '#F6C12B'),
+    ('Frankie Montecalvo',  0.77, 0.86, '#F6C12B'),
+
+    # Winward Racing – Mercedes-AMG GT3
+    ('Philip Ellis',        0.90, 0.90, '#C8C8C8'),
+    ('Russell Ward',        0.80, 0.89, '#C8C8C8'),
+
+    # Wright Motorsports – Porsche 911 GT3 R
+    ('Jan Heylen',          0.90, 0.87, '#D50032'),
+    ('Trent Hindman',       0.86, 0.87, '#D50032'),
+
+    # AO Racing GTD – Porsche 911 GT3 R
+    ('PJ Hyett',            0.73, 0.85, '#D50032'),
+    ('Seb Priaulx',         0.88, 0.85, '#D50032'),
+
+    # Forte Racing – Lamborghini Huracán GT3 Evo2
+    ('Misha Goikhberg',     0.79, 0.84, '#F7D000'),
+    ('Loris Spinelli',      0.90, 0.84, '#F7D000'),
+
+    # Triarsi Competizione – Ferrari 296 GT3
+    ('Charles Scardina',    0.74, 0.86, '#C3002F'),
+    ('Alessandro Balzan',   0.89, 0.86, '#C3002F'),
+
+    # Inception Racing – McLaren 720S GT3
+    ('Brendan Iribe',       0.76, 0.85, '#FF8700'),
+    ('Frederik Schandorff', 0.89, 0.85, '#FF8700'),
+
+    # Turner/ST Racing – BMW M4 GT3
+    ('Bill Auberlen',       0.87, 0.88, '#0066B1'),
+    ('Robby Foley',         0.85, 0.88, '#0066B1'),
+
+    # AWA – Corvette Z06 GT3.R
+    ('Lars Kern',           0.88, 0.87, '#FFB600'),
+    ('Orey Fidani',         0.75, 0.87, '#FFB600'),
+
+    # Gradient Racing – Acura NSX GT3
+    ('Katherine Legge',     0.83, 0.83, '#0033A0'),
+    ('Sheena Monk',         0.72, 0.83, '#0033A0'),
+
+]
+
         
         # Sort drivers by driver_skill descending (highest to lowest)
         driver_data.sort(key=lambda x: x[1], reverse=True)
