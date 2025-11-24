@@ -177,15 +177,13 @@ class PhysicsEngine:
         
         return deceleration
     
-    def calculate_aerodynamic_forces(self, speed, drs_active=False):
+    def calculate_aerodynamic_forces(self, speed):
         """
         Calculate aerodynamic drag and downforce.
         Drag: F_drag = 0.5 * rho * Cd * A * v^2
         Downforce: F_down = 0.5 * rho * Cl * A * v^2
         """
         drag_coeff = self.DRAG_COEFF
-        if drs_active:
-            drag_coeff *= 0.85  # 15% drag reduction with DRS
         
         drag_force = 0.5 * self.AIR_DENSITY * drag_coeff * self.FRONTAL_AREA * speed ** 2
         downforce = 0.5 * self.AIR_DENSITY * self.DOWNFORCE_COEFF * self.FRONTAL_AREA * speed ** 2
@@ -330,7 +328,6 @@ class PhysicsEngine:
         speed = car_state.v
         gear = getattr(car_state, 'gear', 5)
         engine_mode = getattr(car_state, 'engine_mode', 'normal')
-        drs_active = getattr(car_state, 'drs_active', False)
         tire_temp = getattr(car_state, 'tire_temp', 100.0)
         tire_compound = getattr(car_state, 'tyre', 'MEDIUM')
         mass = self.MASS + car_state.fuel * 0.7  # Fuel adds mass (~0.7 kg per unit)
@@ -354,7 +351,7 @@ class PhysicsEngine:
             decel = 0.0
         
         # Aerodynamic forces
-        drag_force, downforce = self.calculate_aerodynamic_forces(speed, drs_active)
+        drag_force, downforce = self.calculate_aerodynamic_forces(speed)
         car_state.aero_downforce = downforce
         
         # Calculate slip angle (simplified)

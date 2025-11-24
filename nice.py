@@ -169,7 +169,6 @@ class CarState:
         self.yaw_rate = 0.0  # Yaw rate (rad/s)
         self.slip_angle = 0.0  # Slip angle (rad)
         self.engine_mode = 'normal'  # 'conservative', 'normal', 'aggressive'
-        self.drs_active = False  # DRS active
         self.ers_energy = 100.0  # ERS energy (%)
         
         # Car parameters
@@ -402,19 +401,12 @@ class RaceSim:
             # Advanced driving behaviors
             car_ahead = None
             overtaking_maneuver = None
-            drs_eligible = False
             
             if self.advanced_driving:
                 # Detect car ahead
                 car_ahead = self.advanced_driving.detect_car_ahead(
                     car, self.cars, self.track, self.track['total_length']
                 )
-                
-                # Check DRS eligibility
-                drs_eligible = self.advanced_driving.check_drs_eligibility(
-                    car, car_ahead, self.track
-                )
-                car.drs_active = drs_eligible
                 
                 # Check overtaking opportunity
                 if car_ahead and lidar_data is not None:

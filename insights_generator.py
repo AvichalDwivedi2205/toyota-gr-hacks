@@ -241,7 +241,6 @@ For EACH driver, generate insights in the following JSON structure:
     "race_craft": {
       "overtaking_efficiency": 0.0-1.0,
       "defensive_driving_score": 0.0-1.0,
-      "drs_usage_score": 0.0-1.0,
       "position_gain_opportunities": [
         {
           "lap": number,

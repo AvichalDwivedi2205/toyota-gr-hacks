@@ -1,6 +1,6 @@
 """
 Advanced Driving Behaviors for F1 Simulator
-Implements overtaking logic, racing line optimization, DRS, and slipstream effects.
+Implements overtaking logic, racing line optimization, and slipstream effects.
 """
 
 import numpy as np
@@ -15,11 +15,6 @@ class AdvancedDriving:
         self.overtaking_distance_threshold = 2.0  # seconds behind car ahead
         self.overtaking_gap_threshold = 1.5  # meters minimum gap
         self.overtaking_lookahead = 5.0  # meters ahead to check
-        
-        # DRS parameters
-        self.drs_activation_distance = 1.0  # seconds behind car ahead
-        self.drs_drag_reduction = 0.15  # 15% drag reduction
-        self.drs_min_speed = 50.0  # km/h minimum speed for DRS
         
         # Slipstream parameters
         self.slipstream_distance = 0.5  # seconds behind
@@ -219,37 +214,6 @@ class AdvancedDriving:
             'overtaking': True
         }
     
-    def check_drs_eligibility(self, car, car_ahead, track_spline):
-        """
-        Check if DRS can be activated.
-        
-        Args:
-            car: Current car
-            car_ahead: Car ahead dict or None
-            track_spline: Track spline dict
-        
-        Returns:
-            True if DRS can be activated
-        """
-        if car.v < self.drs_min_speed / 3.6:  # Convert km/h to m/s
-            return False
-        
-        if car_ahead is None:
-            return False
-        
-        # Check if within activation distance
-        time_gap = car_ahead['time_gap']
-        if time_gap > self.drs_activation_distance:
-            return False
-        
-        # Check if on straight (low curvature)
-        u = track_spline['s_to_u'](car.s)
-        curvature = track_spline['curv'](u)
-        
-        if abs(curvature) > 0.005:  # Not a straight
-            return False
-        
-        return True
     
     def calculate_slipstream_effect(self, car, car_ahead):
         """

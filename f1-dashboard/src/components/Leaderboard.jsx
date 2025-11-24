@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gauge, Zap, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
-import { positionChange, drsPulse, overtakingBadge, lapCounterFlip } from '../utils/animations';
+import { positionChange, overtakingBadge, lapCounterFlip } from '../utils/animations';
 import './Leaderboard.css';
 
 const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) => {
@@ -9,7 +9,6 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
   const [prevPositions, setPrevPositions] = useState({});
   const [showAll, setShowAll] = useState(false);
   const rowRefs = useRef({});
-  const drsRefs = useRef({});
   const overtakingRefs = useRef({});
   const lapCounterRef = useRef(null);
   const prevLapRef = useRef(0);
@@ -23,15 +22,15 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
       return;
     }
     const newSorted = [...cars].sort((a, b) => (a.position || 0) - (b.position || 0));
-    
+
     // Detect position changes for animations
     const oldPositions = { ...prevPositions };
     const newPositions = {};
     const positionChanges = [];
-    
+
     newSorted.forEach(car => {
       newPositions[car.name] = car.position;
-      
+
       // Collect position changes instead of animating immediately
       if (oldPositions[car.name] && oldPositions[car.name] !== car.position) {
         positionChanges.push({
@@ -42,23 +41,23 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
         });
       }
     });
-    
+
     // Update positions and sorted cars immediately for layout animation
     setPrevPositions(newPositions);
     setSortedCars(newSorted);
-    
+
     // Throttle position change animations to prevent vibration
     if (positionChanges.length > 0) {
       // Clear any pending timeout
       if (animationTimeoutRef.current) {
         clearTimeout(animationTimeoutRef.current);
       }
-      
+
       // Store pending animations (overwrite if same car changes again)
       positionChanges.forEach(change => {
         pendingAnimationsRef.current.set(change.carName, change);
       });
-      
+
       // Debounce: wait 200ms before animating to batch rapid changes
       // This prevents vibration when positions change rapidly
       animationTimeoutRef.current = setTimeout(() => {
@@ -74,7 +73,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
         pendingAnimationsRef.current.clear();
       }, 200);
     }
-    
+
     // Cleanup on unmount
     return () => {
       if (animationTimeoutRef.current) {
@@ -82,19 +81,6 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
       }
     };
   }, [cars]);
-
-  // Animate DRS indicators
-  useEffect(() => {
-    sortedCars.forEach(car => {
-      if (car.drs_active && drsRefs.current[car.name]) {
-        drsPulse(drsRefs.current[car.name], { 
-          duration: 1000,
-          color: '#00ff00',
-          intensity: 1
-        });
-      }
-    });
-  }, [sortedCars]);
 
   // Animate overtaking badges
   useEffect(() => {
@@ -147,7 +133,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
 
   const calculateGapToLeader = (car, leader) => {
     if (!leader || car.position === 1) return '--';
-    
+
     // Prefer gap_ahead (gap to car directly ahead) for better readability
     // Fall back to time_interval (gap to leader) if gap_ahead not available
     let gap;
@@ -160,10 +146,10 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
     } else {
       return '--';
     }
-    
+
     // Ensure gap is always positive
     gap = Math.max(0, gap);
-    
+
     // Format based on size: show more precision for small gaps
     if (gap < 0.01) {
       return '<0.01s';
@@ -189,7 +175,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
           RACE CLASSIFICATION
         </motion.h2>
         <div className="race-info">
-          <motion.span 
+          <motion.span
             className="race-time"
             key={raceTime}
             initial={{ scale: 1.2 }}
@@ -203,7 +189,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
           </span>
         </div>
       </div>
-      
+
       <div className="leaderboard-table">
         <div className="table-header">
           <span className="col-pos">Pos</span>
@@ -214,14 +200,13 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
           <span className="col-gear">Pits</span>
           <span className="col-tyre">Tyre</span>
           <span className="col-temp">Temp</span>
-          <span className="col-drs">DRS</span>
         </div>
-        
+
         <AnimatePresence>
           {(showAll ? sortedCars : sortedCars.slice(0, 5)).map((car, index) => {
             const prevPos = prevPositions[car.name] || car.position;
             const positionChange = prevPos - car.position;
-            
+
             return (
               <motion.div
                 key={car.name}
@@ -229,11 +214,11 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
                 initial={{ opacity: 0, x: positionChange > 0 ? -50 : positionChange < 0 ? 50 : 0 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, transition: { duration: 0.2 } }}
-                transition={{ 
+                transition={{
                   opacity: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
                   x: { duration: 0.4, ease: [0.4, 0, 0.2, 1] },
                   delay: index * 0.03,
-                  layout: { 
+                  layout: {
                     type: "spring",
                     stiffness: 300,
                     damping: 30,
@@ -245,10 +230,10 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
                 style={{ borderLeft: `4px solid ${car.color}` }}
                 onClick={() => onCarClick && onCarClick(car.name)}
               >
-                <motion.span 
+                <motion.span
                   className="col-pos position-badge"
                   animate={{ scale: positionChange !== 0 ? 1.15 : 1 }}
-                  transition={{ 
+                  transition={{
                     type: "spring",
                     stiffness: 400,
                     damping: 25,
@@ -259,12 +244,12 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
                   {positionChange > 0 && <span className="position-up">↑</span>}
                   {positionChange < 0 && <span className="position-down">↓</span>}
                 </motion.span>
-                
+
                 <span className="col-driver">
                   <span className="driver-color" style={{ backgroundColor: car.color }}></span>
                   <span className="driver-name">{car.name}</span>
                   {car.overtaking && (
-                    <span 
+                    <span
                       ref={(el) => { if (el) overtakingRefs.current[car.name] = el; }}
                       className="overtaking-badge"
                     >
@@ -272,39 +257,39 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
                     </span>
                   )}
                 </span>
-                
+
                 <span className="col-gap">
                   {calculateGapToLeader(car, leader)}
                 </span>
-                
+
                 <span className="col-speed">
                   <div className="speed-value">{Math.round(car.speed || 0)}</div>
                   <div className="speed-unit">km/h</div>
                 </span>
-                
+
                 <span className="col-rpm">
                   <div className="rpm-gauge">
                     <Gauge size={16} />
                     <span className="rpm-value">{Math.round((car.wear || 0) * 100)}%</span>
                   </div>
                 </span>
-                
+
                 <span className="col-gear">
                   <div className="pitstop-badge">
                     {car.pitstop_count || 0}
                   </div>
                 </span>
-                
+
                 <span className="col-tyre">
-                  <span 
-                    className="tyre-indicator" 
+                  <span
+                    className="tyre-indicator"
                     style={{ backgroundColor: getTyreColor(car.tyre) }}
                   ></span>
                   <span className="tyre-text">{car.tyre}</span>
                   <div className="wear-indicator">
-                    <div 
-                      className="wear-fill-mini" 
-                      style={{ 
+                    <div
+                      className="wear-fill-mini"
+                      style={{
                         width: `${(car.wear || 0) * 100}%`,
                         backgroundColor: car.wear > 0.7 ? '#ff4444' : car.wear > 0.4 ? '#ffaa00' : '#44ff44'
                       }}
@@ -312,36 +297,23 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
                   </div>
                   <span className="wear-percentage">{Math.round((car.wear || 0) * 100)}%</span>
                 </span>
-                
+
                 <span className="col-temp">
-                  <div 
+                  <div
                     className="temp-indicator"
                     style={{ color: getTireTempColor(car.tire_temp || 100) }}
                   >
                     {Math.round(car.tire_temp || 100)}°C
                   </div>
                 </span>
-                
-                <span className="col-drs">
-                  {car.drs_active ? (
-                    <div
-                      ref={(el) => { if (el) drsRefs.current[car.name] = el; }}
-                      className="drs-active"
-                    >
-                      <Zap size={14} />
-                    </div>
-                  ) : (
-                    <div className="drs-inactive">--</div>
-                  )}
-                </span>
               </motion.div>
             );
           })}
         </AnimatePresence>
       </div>
-      
+
       {sortedCars.length > 5 && (
-        <button 
+        <button
           className="show-more-leaderboard"
           onClick={() => setShowAll(!showAll)}
         >
@@ -358,7 +330,7 @@ const Leaderboard = ({ cars = [], raceTime = 0, totalLaps = 15, onCarClick }) =>
           )}
         </button>
       )}
-      
+
       {sortedCars && sortedCars.length > 0 && sortedCars.some(car => car.on_pit) && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
