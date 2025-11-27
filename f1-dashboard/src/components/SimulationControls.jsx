@@ -7,7 +7,7 @@ const SimulationControls = ({ wsUrl, raceStarted, raceFinished }) => {
   const [speed, setSpeed] = useState(1.0);
   const [isChangingSpeed, setIsChangingSpeed] = useState(false);
 
-  const baseUrl = wsUrl.replace('ws://', 'http://').replace('/ws', '');
+  const baseUrl = wsUrl.replace('/ws', '').replace('ws://', 'http://').replace('wss://', 'https://');
 
   // Fetch current race status to sync pause/speed state
   useEffect(() => {
