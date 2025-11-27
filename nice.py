@@ -194,6 +194,48 @@ class CarState:
 
     def lap_progress_fraction(self, track):
         return (self.s % track['total_length']) / track['total_length']
+    
+    def to_dict(self, track):
+        """Convert car state to dictionary for WebSocket broadcast"""
+        import math
+        u = track['s_to_u'](self.s)
+        pos = track['pos'](u)[0]
+        
+        # Calculate heading
+        u2 = track['s_to_u'](self.s + 1.0)
+        pos2 = track['pos'](u2)[0]
+        angle = math.atan2(pos2[1] - pos[1], pos2[0] - pos[0])
+        
+        return {
+            'name': self.name,
+            'color': self.color,
+            'position': self.position or 0,
+            'laps': self.laps_completed,
+            'wear': round(self.wear, 3),
+            'tyre': self.tyre,
+            'fuel': round(self.fuel, 1),
+            'speed': round(self.v * 3.6, 1),  # km/h
+            'x': float(pos[0]),
+            'y': float(pos[1]),
+            'angle': float(angle),
+            'total_time': round(self.total_time, 2),
+            'on_pit': self.on_pit,
+            # Enhanced physics parameters
+            'rpm': round(getattr(self, 'engine_rpm', 5000), 0),
+            'gear': getattr(self, 'gear', 1),
+            'throttle': round(getattr(self, 'throttle', 0.0), 2),
+            'brake': round(getattr(self, 'brake_pressure', 0.0), 2),
+            'tire_temp': round(getattr(self, 'tire_temp', 100.0), 1),
+            'drs_active': getattr(self, 'drs_active', False),
+            'ers_energy': round(getattr(self, 'ers_energy', 100.0), 1),
+            'controller_type': getattr(self, 'controller_type', 'pure_pursuit'),
+            'overtaking': getattr(self, 'overtaking', False),
+            'aero_downforce': round(getattr(self, 'aero_downforce', 0.0), 0),
+            'time_interval': round(getattr(self, 'time_interval', 0.0), 3),
+            'distance_interval': round(getattr(self, 'distance_interval', 0.0), 1),
+            'gap_ahead': round(getattr(self, 'gap_ahead', 0.0), 3),
+            'distance_gap_ahead': round(getattr(self, 'distance_gap_ahead', 0.0), 1),
+        }
 
 
 class RaceSim:
@@ -249,6 +291,9 @@ class RaceSim:
         self.total_laps = 36
         self.race_finished = False
         self.race_started = False
+        self.paused = False
+        self.speed_multiplier = 1.0
+        self.race_events = []
         
         # Print physics status summary
         status = self.get_physics_status()
@@ -590,6 +635,56 @@ class RaceSim:
         for i, c in enumerate(sorted_cars):
             c.position = i + 1
         return sorted_cars
+    
+    def get_state(self):
+        """Get complete race state for WebSocket broadcast"""
+        sorted_cars = self.get_leaderboard()
+        
+        # Calculate intervals (gaps from leader and car ahead)
+        leader = sorted_cars[0] if sorted_cars else None
+        if leader:
+            for i, car in enumerate(sorted_cars):
+                # Time interval from leader
+                car.time_interval = max(0.0, car.total_time - leader.total_time)
+                
+                # Distance interval from leader (accounting for lap differences)
+                track_length = self.track['total_length']
+                lap_diff = car.laps_completed - leader.laps_completed
+                distance_interval = (lap_diff * track_length) + (car.s - leader.s)
+                car.distance_interval = distance_interval
+                
+                # Calculate gap to car ahead (for better display)
+                if i > 0:
+                    car_ahead = sorted_cars[i - 1]
+                    # Time gap to car ahead
+                    car.gap_ahead = max(0.0, car.total_time - car_ahead.total_time)
+                    # Distance gap to car ahead
+                    lap_diff_ahead = car.laps_completed - car_ahead.laps_completed
+                    distance_gap_ahead = (lap_diff_ahead * track_length) + (car_ahead.s - car.s)
+                    car.distance_gap_ahead = distance_gap_ahead
+                else:
+                    # Leader has no car ahead
+                    car.gap_ahead = 0.0
+                    car.distance_gap_ahead = 0.0
+        
+        tyre_counts = {}
+        for c in self.cars:
+            tyre_counts[c.tyre] = tyre_counts.get(c.tyre, 0) + 1
+        
+        state = {
+            'time': round(self.time, 1),
+            'cars': [car.to_dict(self.track) for car in self.cars],
+            'weather': self.weather,
+            'total_laps': self.total_laps,
+            'tyre_distribution': tyre_counts,
+            'race_finished': self.race_finished,
+            'race_started': self.race_started,
+            'paused': self.paused,
+            'speed_multiplier': self.speed_multiplier,
+            'race_events': self.race_events
+        }
+        
+        return state
 
 # -------------------- Visualization & Dashboard --------------------
 

@@ -19,16 +19,20 @@ import sys
 import os
 sys.path.append(os.path.dirname(__file__))
 
-# Try to import enhanced RaceSim from nice.py
+# Force use of basic RaceSim for consistent behavior across all environments
 USE_ENHANCED = False
-try:
-    from nice import RaceSim as EnhancedRaceSim, CarState as EnhancedCarState
-    USE_ENHANCED = True
-    print("✓ Enhanced RaceSim imported successfully - Enhanced Physics will be used!")
-except ImportError as e:
-    USE_ENHANCED = False
-    print(f"⚠ Warning: Could not import enhanced RaceSim from nice.py: {e}")
-    print("   Using basic physics version")
+print("ℹ️  Using basic RaceSim from server.py for production stability")
+
+# Optional: Try to import enhanced RaceSim from nice.py (disabled for production)
+# USE_ENHANCED = False
+# try:
+#     from nice import RaceSim as EnhancedRaceSim, CarState as EnhancedCarState
+#     USE_ENHANCED = True
+#     print("✓ Enhanced RaceSim imported successfully - Enhanced Physics will be used!")
+# except ImportError as e:
+#     USE_ENHANCED = False
+#     print(f"⚠ Warning: Could not import enhanced RaceSim from nice.py: {e}")
+#     print("   Using basic physics version")
 
 # -------------------- Track & Simulation Core --------------------
 
