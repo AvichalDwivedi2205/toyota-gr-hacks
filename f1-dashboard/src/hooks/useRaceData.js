@@ -14,7 +14,7 @@ export const useRaceData = (wsUrl) => {
     time: 0,
     cars: [],
     weather: { rain: 0, track_temp: 25, wind: 0 },
-    total_laps: 15,
+    total_laps: 36, // Default to backend value (36 laps)
     tyre_distribution: {}
   });
 
@@ -46,8 +46,24 @@ export const useRaceData = (wsUrl) => {
       if (data.type === 'track' && data.data) {
         setTrackData(data.data);
       } else if (data.time !== undefined) {
-        // Regular race state update
-        setRaceState(data);
+        // Regular race state update - ensure total_laps is preserved from backend
+        setRaceState(prevState => ({
+          ...prevState,
+          ...data,
+          // Always use backend's total_laps if provided, otherwise keep current value
+          total_laps: data.total_laps !== undefined ? data.total_laps : prevState.total_laps
+        }));
+        
+        // Debug logging for cars visibility
+        if (data.cars && data.cars.length > 0) {
+          const carsWithCoords = data.cars.filter(c => c.x !== undefined && c.y !== undefined);
+          console.log(`Race state update: ${data.cars.length} total cars, ${carsWithCoords.length} with coordinates`);
+          if (carsWithCoords.length === 0) {
+            console.warn('No cars have x/y coordinates!', data.cars[0]);
+          }
+        } else {
+          console.warn('Race state update received but cars array is empty or missing');
+        }
       }
     }
   }, [data]);

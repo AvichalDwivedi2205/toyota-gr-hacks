@@ -1928,6 +1928,15 @@ async def websocket_endpoint(websocket: WebSocket):
                 # Client disconnected before we could send track data
                 return
         
+        # Send initial race state immediately so client has current state
+        if sim:
+            try:
+                initial_state = sim.get_state()
+                await websocket.send_json(initial_state)
+            except (WebSocketDisconnect, Exception):
+                # Client disconnected before we could send initial state
+                return
+        
         # Keep connection alive
         while True:
             # Receive any messages from client (for future commands)

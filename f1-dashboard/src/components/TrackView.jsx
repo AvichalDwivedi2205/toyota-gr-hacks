@@ -29,6 +29,16 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
 
   useEffect(() => {
     if (cars && cars.length > 0) {
+      // Debug: Log cars data
+      const carsWithCoords = cars.filter(c => c && c.x !== undefined && c.y !== undefined);
+      if (carsWithCoords.length !== cars.length) {
+        console.warn(`TrackView: ${cars.length} cars received, but only ${carsWithCoords.length} have x/y coordinates`);
+        const carWithoutCoords = cars.find(c => !c || c.x === undefined || c.y === undefined);
+        if (carWithoutCoords) {
+          console.warn('Example car without coordinates:', carWithoutCoords);
+        }
+      }
+      
       // Interpolate car positions for smooth animation
       const interpolated = cars.map((car, idx) => {
         const prevCar = prevCarsRef.current[idx];
@@ -427,12 +437,20 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
         .filter(car => car && car.x !== undefined && car.y !== undefined)
         .sort((a, b) => (a.position || 0) - (b.position || 0));
       
+      // Debug: Log if no cars pass the filter
+      if (sortedCars.length === 0 && interpolatedCars.length > 0) {
+        console.warn(`TrackView render: ${interpolatedCars.length} cars in interpolatedCars, but none have valid x/y coordinates`);
+      }
+      
       sortedCars.forEach(car => {
         if (!car || car.x === undefined || car.y === undefined) return;
         const isSelected = followCar === car.name;
         drawCar(ctx, car, transform, isSelected);
         drawLidar(ctx, car, transform);
       });
+    } else if (interpolatedCars && interpolatedCars.length === 0) {
+      // Debug: Log when cars array is empty
+      console.warn('TrackView render: interpolatedCars is empty');
     }
 
     animationFrameRef.current = requestAnimationFrame(render);

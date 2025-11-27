@@ -124,8 +124,15 @@ function App() {
 
   // Debug logging
   React.useEffect(() => {
-    console.log('App State:', { isConnected, error, hasTrackData: !!trackData, hasCars: raceState.cars?.length });
-  }, [isConnected, error, trackData, raceState.cars]);
+    console.log('App State:', { 
+      isConnected, 
+      error, 
+      hasTrackData: !!trackData, 
+      hasCars: raceState.cars?.length,
+      totalLaps: raceState.total_laps,
+      carsWithCoords: raceState.cars?.filter(c => c && c.x !== undefined && c.y !== undefined).length || 0
+    });
+  }, [isConnected, error, trackData, raceState.cars, raceState.total_laps]);
 
   // Music playback based on leaderboard position
   useEffect(() => {
@@ -394,7 +401,7 @@ function App() {
             <Leaderboard 
               cars={raceState.cars || []}
               raceTime={raceState.time || 0}
-              totalLaps={raceState.total_laps || 15}
+              totalLaps={raceState.total_laps || 36}
               onCarClick={handleCarClick}
             />
           </div>
