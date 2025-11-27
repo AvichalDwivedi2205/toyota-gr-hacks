@@ -51,10 +51,6 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
         return car;
       });
       setInterpolatedCars(interpolated);
-    } else {
-      // If cars is null/undefined, set to empty array
-      setInterpolatedCars([]);
-    }
       
       // Detect sharp turns for tire marks
       cars.forEach(car => {
@@ -82,6 +78,9 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
       });
       
       prevCarsRef.current = cars;
+    } else {
+      // If cars is null/undefined, set to empty array
+      setInterpolatedCars([]);
     }
   }, [cars]);
 

@@ -59,3 +59,4 @@ logs/
 *.log
 DEPLOYMENT.md
 QUICK_DEPLOY.md
+.vercel
