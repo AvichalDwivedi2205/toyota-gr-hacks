@@ -32,6 +32,14 @@ const getWebSocketUrl = () => {
 const WS_URL = getWebSocketUrl();
 const BACKEND_URL = getBackendUrl();
 
+// Debug: Log URLs for production troubleshooting
+console.log('🔧 Backend Configuration:', {
+  BACKEND_URL,
+  WS_URL,
+  VITE_BACKEND_URL: import.meta.env.VITE_BACKEND_URL,
+  MODE: import.meta.env.MODE
+});
+
 function App() {
   const { 
     isConnected, 
