@@ -43,10 +43,31 @@ export const useRaceData = (wsUrl) => {
 
   useEffect(() => {
     if (data) {
+      console.log('📦 [useRaceData] Received data:', {
+        type: data.type,
+        hasTrack: !!data.data,
+        hasTime: data.time !== undefined,
+        hasCars: !!data.cars,
+        carsCount: data.cars?.length || 0,
+        race_started: data.race_started,
+        race_finished: data.race_finished
+      });
+      
       if (data.type === 'track' && data.data) {
+        console.log('🛤️ [useRaceData] Setting track data:', {
+          points: data.data.points?.length || 0,
+          total_length: data.data.total_length
+        });
         setTrackData(data.data);
       } else if (data.time !== undefined) {
         // Regular race state update - ensure total_laps is preserved from backend
+        console.log('🏁 [useRaceData] Race state update:', {
+          time: data.time,
+          cars: data.cars?.length || 0,
+          race_started: data.race_started,
+          race_finished: data.race_finished
+        });
+        
         setRaceState(prevState => ({
           ...prevState,
           ...data,
@@ -57,14 +78,23 @@ export const useRaceData = (wsUrl) => {
         // Debug logging for cars visibility
         if (data.cars && data.cars.length > 0) {
           const carsWithCoords = data.cars.filter(c => c.x !== undefined && c.y !== undefined);
-          console.log(`Race state update: ${data.cars.length} total cars, ${carsWithCoords.length} with coordinates`);
+          console.log(`✅ [useRaceData] Race state update: ${data.cars.length} total cars, ${carsWithCoords.length} with coordinates`);
           if (carsWithCoords.length === 0) {
-            console.warn('No cars have x/y coordinates!', data.cars[0]);
+            console.warn('⚠️ [useRaceData] No cars have x/y coordinates!', data.cars[0]);
+          } else {
+            console.log('📍 [useRaceData] Sample car position:', {
+              name: data.cars[0].name,
+              x: data.cars[0].x,
+              y: data.cars[0].y,
+              speed: data.cars[0].speed
+            });
           }
         } else {
-          console.warn('Race state update received but cars array is empty or missing');
+          console.warn('⚠️ [useRaceData] Race state update received but cars array is empty or missing');
         }
       }
+    } else {
+      console.log('❌ [useRaceData] Received null/undefined data');
     }
   }, [data]);
 

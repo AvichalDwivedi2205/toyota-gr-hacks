@@ -1555,37 +1555,61 @@ track_data = None
 
 def initialize_simulation(weather=None):
     """Initialize or reset the simulation"""
+    print("[INIT] 🏁 Starting simulation initialization...")
     global sim, track_data
+    
+    print("[INIT] Loading track waypoints...")
     waypoints = load_gp_track_simple()
+    print(f"[INIT] ✅ Loaded {len(waypoints)} waypoints")
+    
+    print("[INIT] Building track spline...")
     track_data = build_spline(waypoints, n_points=2000)
+    print(f"[INIT] ✅ Track spline built: {len(track_data['track_points'])} points, length={track_data['total_length']:.1f}m")
+    
     if weather is None:
         weather = {'rain': 0.15, 'track_temp': 22.0, 'wind': 3.0}
+    print(f"[INIT] Weather: {weather}")
     
     if USE_ENHANCED:
-        print("🚀 Initializing simulation with Enhanced Physics Engine...")
+        print("[INIT] 🚀 Initializing simulation with Enhanced Physics Engine...")
         sim = EnhancedRaceSim(track_data, n_cars=20, weather=weather)
         # Verify physics engine is loaded
         if hasattr(sim, 'physics_engine') and sim.physics_engine:
-            print("✓ Simulation initialized with Enhanced Physics Engine active")
+            print("[INIT] ✓ Simulation initialized with Enhanced Physics Engine active")
             # Print detailed status if available
             if hasattr(sim, 'get_physics_status'):
                 status = sim.get_physics_status()
                 if status['enhanced_physics_active']:
-                    print("✅ ENHANCED PHYSICS IS ACTIVE AND BEING USED!")
+                    print("[INIT] ✅ ENHANCED PHYSICS IS ACTIVE AND BEING USED!")
                 else:
-                    print("⚠ Warning: Enhanced RaceSim loaded but Physics Engine not active")
+                    print("[INIT] ⚠ Warning: Enhanced RaceSim loaded but Physics Engine not active")
         else:
-            print("⚠ Warning: Enhanced RaceSim loaded but Physics Engine not available")
+            print("[INIT] ⚠ Warning: Enhanced RaceSim loaded but Physics Engine not available")
     else:
-        print("⚠ Using basic physics simulation (no enhanced physics)")
+        print("[INIT] ⚠ Using basic physics simulation (no enhanced physics)")
         sim = RaceSim(track_data, n_cars=20, weather=weather)
+    
     sim.total_laps = 36
+    print(f"[INIT] ✅ Simulation initialized: {len(sim.cars)} cars, {sim.total_laps} laps")
+    print(f"[INIT] Sim object type: {type(sim)}")
+    print(f"[INIT] First car: {sim.cars[0].name if sim.cars else 'NO CARS'}")
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize simulation on server startup"""
-    initialize_simulation()
-    asyncio.create_task(simulation_loop())
+    print("[STARTUP] ========================================")
+    print("[STARTUP] Toyota GR Simulator Server Starting...")
+    print("[STARTUP] ========================================")
+    try:
+        initialize_simulation()
+        print(f"[STARTUP] ✅ Simulation initialized successfully")
+        print(f"[STARTUP] Sim object: {sim}, type: {type(sim)}")
+        asyncio.create_task(simulation_loop())
+        print("[STARTUP] ✅ Simulation loop task created")
+    except Exception as e:
+        print(f"[STARTUP] ❌ Error during startup: {e}")
+        import traceback
+        print(f"[STARTUP] Traceback: {traceback.format_exc()}")
 
 async def simulation_loop():
     """Main simulation loop - runs continuously and broadcasts to all clients"""
@@ -1740,25 +1764,45 @@ async def set_simulation_speed(request: SpeedRequest):
 @app.get("/api/race-status")
 async def get_race_status():
     """Get current race status"""
-    global sim
-    if sim is None:
+    print(f"[DEBUG] /api/race-status called")
+    try:
+        global sim
+        print(f"[DEBUG] sim object: {sim}, type: {type(sim)}")
+        
+        if sim is None:
+            print(f"[DEBUG] sim is None, returning default status")
+            return {
+                "race_started": False,
+                "race_finished": False,
+                "paused": False,
+                "speed_multiplier": 1.0,
+                "time": 0.0
+            }
+        
+        status = {
+            "race_started": getattr(sim, 'race_started', False),
+            "race_finished": getattr(sim, 'race_finished', False),
+            "paused": getattr(sim, 'paused', False),
+            "speed_multiplier": getattr(sim, 'speed_multiplier', 1.0),
+            "time": getattr(sim, 'time', 0.0),
+            "weather": getattr(sim, 'weather', {}),
+            "total_laps": getattr(sim, 'total_laps', 36)
+        }
+        print(f"[DEBUG] Returning status: {status}")
+        return status
+    except Exception as e:
+        print(f"[ERROR] Exception in get_race_status: {e}")
+        print(f"[ERROR] Exception type: {type(e)}")
+        import traceback
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
         return {
             "race_started": False,
             "race_finished": False,
             "paused": False,
             "speed_multiplier": 1.0,
-            "time": 0.0
+            "time": 0.0,
+            "error": str(e)
         }
-    
-    return {
-        "race_started": sim.race_started,
-        "race_finished": sim.race_finished,
-        "paused": sim.paused,
-        "speed_multiplier": sim.speed_multiplier,
-        "time": sim.time,
-        "weather": sim.weather,
-        "total_laps": sim.total_laps
-    }
 
 @app.get("/api/race-insights")
 async def get_race_insights():
@@ -1906,34 +1950,44 @@ async def get_optimal_pit_strategy():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    print(f"[WebSocket] 🔌 New connection attempt from {websocket.client}")
     await websocket.accept()
     active_connections.add(websocket)
+    print(f"[WebSocket] ✅ Connection accepted. Total connections: {len(active_connections)}")
     
     try:
         # Ensure simulation is initialized
         if track_data is None:
+            print(f"[WebSocket] ⚠️ Track data is None, initializing simulation")
             initialize_simulation()
+        else:
+            print(f"[WebSocket] ✅ Track data exists")
         
         # Send initial track data
         if track_data:
             try:
-                await websocket.send_json({
+                track_payload = {
                     "type": "track",
                     "data": {
                         "points": track_data['track_points'],
                         "total_length": float(track_data['total_length'])
                     }
-                })
-            except (WebSocketDisconnect, Exception):
+                }
+                print(f"[WebSocket] 📤 Sending track data: {len(track_data['track_points'])} points")
+                await websocket.send_json(track_payload)
+            except (WebSocketDisconnect, Exception) as e:
                 # Client disconnected before we could send track data
+                print(f"[WebSocket] ❌ Failed to send track data: {e}")
                 return
         
         # Send initial race state immediately so client has current state
         if sim:
             try:
                 initial_state = sim.get_state()
+                print(f"[WebSocket] 📤 Sending initial state: {len(initial_state.get('cars', []))} cars, race_started={initial_state.get('race_started')}")
                 await websocket.send_json(initial_state)
-            except (WebSocketDisconnect, Exception):
+            except (WebSocketDisconnect, Exception) as e:
+                print(f"[WebSocket] ❌ Failed to send initial state: {e}")
                 # Client disconnected before we could send initial state
                 return
         

@@ -12,18 +12,46 @@ const SimulationControls = ({ wsUrl, raceStarted, raceFinished }) => {
   // Fetch current race status to sync pause/speed state
   useEffect(() => {
     const fetchStatus = async () => {
+      console.log('🔍 [SimulationControls] Fetching race status from:', `${baseUrl}/api/race-status`);
       try {
         const response = await fetch(`${baseUrl}/api/race-status`);
+        console.log('📡 [SimulationControls] Race status response:', {
+          status: response.status,
+          ok: response.ok,
+          statusText: response.statusText,
+          url: response.url
+        });
+        
+        if (!response.ok) {
+          const text = await response.text();
+          console.error('❌ [SimulationControls] Race status failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: text
+          });
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
+        console.log('✅ [SimulationControls] Race status data:', data);
         setIsPaused(data.paused || false);
         setSpeed(data.speed_multiplier || 1.0);
       } catch (error) {
-        console.error('Error fetching race status:', error);
+        console.error('❌ [SimulationControls] Error fetching race status:', {
+          error: error.message,
+          stack: error.stack,
+          baseUrl,
+          fullUrl: `${baseUrl}/api/race-status`
+        });
+        throw error;
       }
     };
 
     if (raceStarted && !raceFinished) {
+      console.log('🏁 [SimulationControls] Race started, fetching status');
       fetchStatus();
+    } else {
+      console.log('⏸️ [SimulationControls] Race not started or finished, skipping status fetch');
     }
   }, [raceStarted, raceFinished, baseUrl]);
 
