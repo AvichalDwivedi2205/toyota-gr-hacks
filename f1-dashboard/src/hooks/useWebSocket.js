@@ -27,6 +27,12 @@ export const useWebSocket = (url) => {
       ws.onmessage = (event) => {
         try {
           const parsedData = JSON.parse(event.data);
+          // Debug: Log WebSocket messages to help diagnose car visibility issues
+          if (parsedData.cars !== undefined) {
+            console.log(`[WebSocket] Received race state: ${parsedData.cars?.length || 0} cars, time: ${parsedData.time}, race_started: ${parsedData.race_started}`);
+          } else if (parsedData.type === 'track') {
+            console.log('[WebSocket] Received track data');
+          }
           setData(parsedData);
         } catch (err) {
           console.error('Failed to parse WebSocket message:', err);

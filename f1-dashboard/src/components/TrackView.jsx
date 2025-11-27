@@ -28,14 +28,17 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
   const prevCarsRef = useRef(cars || []);
 
   useEffect(() => {
-    if (cars && cars.length > 0) {
-      // Debug: Log cars data
-      const carsWithCoords = cars.filter(c => c && c.x !== undefined && c.y !== undefined);
-      if (carsWithCoords.length !== cars.length) {
-        console.warn(`TrackView: ${cars.length} cars received, but only ${carsWithCoords.length} have x/y coordinates`);
-        const carWithoutCoords = cars.find(c => !c || c.x === undefined || c.y === undefined);
-        if (carWithoutCoords) {
-          console.warn('Example car without coordinates:', carWithoutCoords);
+    // Always update interpolatedCars, even if empty, to prevent stale state
+    if (cars) {
+      // Debug: Log cars data only when cars exist
+      if (cars.length > 0) {
+        const carsWithCoords = cars.filter(c => c && c.x !== undefined && c.y !== undefined);
+        if (carsWithCoords.length !== cars.length) {
+          console.warn(`TrackView: ${cars.length} cars received, but only ${carsWithCoords.length} have x/y coordinates`);
+          const carWithoutCoords = cars.find(c => !c || c.x === undefined || c.y === undefined);
+          if (carWithoutCoords) {
+            console.warn('Example car without coordinates:', carWithoutCoords);
+          }
         }
       }
       
@@ -48,6 +51,10 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
         return car;
       });
       setInterpolatedCars(interpolated);
+    } else {
+      // If cars is null/undefined, set to empty array
+      setInterpolatedCars([]);
+    }
       
       // Detect sharp turns for tire marks
       cars.forEach(car => {
@@ -448,10 +455,8 @@ const TrackView = ({ trackData, cars = [], onCarClick }) => {
         drawCar(ctx, car, transform, isSelected);
         drawLidar(ctx, car, transform);
       });
-    } else if (interpolatedCars && interpolatedCars.length === 0) {
-      // Debug: Log when cars array is empty
-      console.warn('TrackView render: interpolatedCars is empty');
     }
+    // Removed the warning log - it was causing spam. Cars will appear when race starts.
 
     animationFrameRef.current = requestAnimationFrame(render);
   }, [trackData, interpolatedCars, zoom, pan, followCar, drawTrack, drawCar, drawLidar]);
